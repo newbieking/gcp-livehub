@@ -12,7 +12,7 @@ ENV PORT=8080
 COPY package*.json ./
 
 # 仅安装生产依赖
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # 拷贝源代码
 COPY . .
