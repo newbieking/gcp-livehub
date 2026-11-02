@@ -4,9 +4,13 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "dev": "node --env-file=.env.development --watch src/index.js",
+    "start:prod": "node --env-file=.env.production src/index.js",
+    "test": "node --env-file=.env.test src/index.js",
+    "env:dev": "node scripts/switch-env.js dev",
+    "env:prod": "node scripts/switch-env.js prod",
+    "env:test": "node scripts/switch-env.js test"
   },
   "keywords": [],
   "author": "",

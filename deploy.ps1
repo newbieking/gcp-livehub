@@ -6,6 +6,9 @@ $REGION = "us-central1"
 
 Write-Host ">>> 准备部署 $SERVICE_NAME 到 Google Cloud Run (区域: $REGION)..." -ForegroundColor Cyan
 
+# 自动切换至生产环境配置
+node scripts/switch-env.js prod
+
 # 关键参数解释：
 # --source .              : 云端自动构建 Dockerfile
 # --allow-unauthenticated : 允许匿名公网访问
@@ -14,6 +17,7 @@ Write-Host ">>> 准备部署 $SERVICE_NAME 到 Google Cloud Run (区域: $REGION
 # --timeout=3600          : WebSocket 连接超时上限为 60 分钟（Socket.IO 会在断开后自动平滑重连）
 # --session-affinity      : 开启会话保持
 # --memory=512Mi --cpu=1  : 规格轻量，处于 Always Free 免费额度保护范围内
+# --set-env-vars          : 注入生产环境配置开关 (启用 Firestore 持久化)
 
 gcloud run deploy $SERVICE_NAME `
   --source . `
@@ -24,7 +28,8 @@ gcloud run deploy $SERVICE_NAME `
   --timeout=3600 `
   --session-affinity `
   --memory=512Mi `
-  --cpu=1
+  --cpu=1 `
+  --set-env-vars NODE_ENV=production,APP_ENV=production,STORAGE_DRIVER=firestore,LOG_LEVEL=info
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n✅ 部署成功！你可以在终端上方查看 Cloud Run 分配的公网 HTTPS/WSS 访问链接。" -ForegroundColor Green

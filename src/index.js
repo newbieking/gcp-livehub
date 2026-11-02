@@ -1,9 +1,12 @@
 import http from 'http';
-import { config } from './config/index.js';
+import { config, printConfigSummary } from './config/index.js';
 import { createApp } from './app.js';
 import { initSocketServer } from './sockets/index.js';
 
 let ioInstance = null;
+
+// 打印配置概览
+printConfigSummary();
 
 // 创建 Express 应用
 const app = createApp(() => (ioInstance ? ioInstance.engine.clientsCount : 0));

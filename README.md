@@ -1,59 +1,72 @@
-# GCP LiveHub: Node.js + Socket.IO 实时双向交互原型
+# GCP LiveHub: Node.js + Socket.IO 实时双向交互应用
 
-基于 **Node.js + Socket.IO** 构建的高性能实时双向交互系统，专为 **Google Cloud Run (免费层额度优先)** 优化设计。
+基于 **Node.js (ESM) + Socket.IO** 构建的高性能实时交互系统，专为 **Google Cloud Run (免费层额度优先)** 优化设计，具备完善的多环境配置切换与持久化扩展架构。
 
 ---
 
 ## 🌟 核心特性
 
-- **房间隔离与广播（Room Broadcast）**：支持多频道切换（大厅、对战大厅、白板协同、自定义房间），支持加入/离开广播与在线成员列表同步。
-- **自动断线重连（Auto Reconnection）**：客户端内置指数避退自动重连（Exponential Backoff）机制与重连恢复后自动重新入房。
-- **输入状态指示（Typing Indicator）**：实时感知对方“正在输入...”。
-- **网络状态与测速面板**：实时 Ping-Pong 往返延迟探测与传输协议（WebSocket / Polling）动态显示。
-- **优雅停机与存活探针**：内置 `/healthz` 检查端点与 `SIGTERM/SIGINT` 信号优雅关闭处理。
+- **多环境一键切换**：支持 `dev`、`prod`、`test` 多套独立环境，通过环境变量与配置开关一键平滑流转。
+- **持久化驱动插拔**：通过 `STORAGE_DRIVER` 切换 `file`（本地文件）/ `firestore`（GCP 数据库）/ `memory`（纯内存）。
+- **房间隔离与 1v1 私聊**：支持公共频道广播与好友点对点私信，消息历史自动持久化并支持倒序游标恢复。
+- **未读消息红点气泡**：支持频道与好友列表未读消息计数气泡（`1` / `99+`）及浏览器标签页标题通知。
+- **精准打字感知（Typing Indicator）**：1v1 私聊定向感知对方输入状态，消除公共房间噪音。
+- **自动断线重连**：客户端指数避退自动重试（1~5秒），网络恢复自动无感重新入房。
+- **存活探针与单容器省钱架构**：自带 `/healthz`，Cloud Run 限制单实例免除 Redis 开销。
 
 ---
 
-## 🚀 本地极速运行
+## ⚙️ 多环境配置与一键切换
 
+系统内置三套标准化环境：
+
+| 环境 | 配置文件 | 存储驱动 (`STORAGE_DRIVER`) | 日志级别 | 典型场景 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Development** | `.env.development` | `file` (自动写入 `./data/messages.json`) | `debug` | 本地开发调试 |
+| **Production** | `.env.production` | `firestore` (Google Cloud 数据库) | `info` | 云端 Cloud Run 正式上线 |
+| **Test** | `.env.test` | `memory` (纯内存，用完即弃) | `warn` | CI/CD 与单元测试 |
+
+### 1. 一键切换当前激活环境
 ```bash
-# 1. 安装依赖（已内置）
-npm install
+# 切换到开发环境
+npm run env:dev
 
-# 2. 启动服务
-npm start
+# 切换到生产环境
+npm run env:prod
 
-# 或热重载开发模式
-npm run dev
+# 切换到测试环境
+npm run env:test
 ```
 
-浏览器打开：[http://localhost:8080](http://localhost:8080) 即可开始多标签页模拟多人互动。
+### 2. 指定环境直接启动
+```bash
+# 开发环境（带热重载）
+npm run dev
+
+# 生产环境运行
+npm run start:prod
+
+# 纯内存测试运行
+npm test
+```
 
 ---
 
-## ☁️ 一键部署到 Google Cloud Run（零额外开销方案）
+## 🚀 本地运行与体验
 
-本项目针对 GCP 免费体验额度做了专属配置：
-- **`--max-instances 1`**：锁定单容器实例，进程内完成所有房间广播，**彻底无需引入昂贵的 GCP Memorystore Redis（每月省下约 $35+）**。
-- **`--concurrency 250`**：单实例轻松承载多达 250 个长连接。
-- **`--timeout 3600`**：设置 60 分钟 WebSocket 连接生存周期。
-- **`--session-affinity`**：启用粘性会话。
+```bash
+# 启动服务 (读取当前激活的 .env)
+npm start
+```
+浏览器打开：[http://localhost:8080](http://localhost:8080) 即可开始多标签页交互测试。
 
-### 运行部署命令：
+---
+
+## ☁️ 一键部署到 Google Cloud Run
+
+运行自带的自动化部署脚本（会自动切换为生产配置）：
 ```powershell
 .\deploy.ps1
 ```
-或者手动执行：
-```bash
-gcloud run deploy livehub \
-  --source . \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --max-instances=1 \
-  --concurrency=250 \
-  --timeout=3600 \
-  --session-affinity \
-  --memory=512Mi \
-  --cpu=1
-```
-*(部署完成后，GCP 将自动提供一个免费的 HTTPS/WSS 域名)*
+
+部署完成后，控制台将输出 GCP 自动分配的公网 HTTPS / WSS 访问域名。
