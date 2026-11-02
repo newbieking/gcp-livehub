@@ -18,7 +18,7 @@ const server = http.createServer(app);
 ioInstance = initSocketServer(server);
 
 // 启动监听
-server.listen(config.port, () => {
+server.listen(config.port, '0.0.0.0', () => {
   console.log(`🚀 实时交互服务已启动 [ESModule 架构]`);
   console.log(`📡 监听端口: ${config.port}`);
   console.log(`🔗 本地地址: http://localhost:${config.port}`);

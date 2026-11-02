@@ -30,7 +30,7 @@ gcloud run deploy $SERVICE_NAME `
   --session-affinity `
   --memory=512Mi `
   --cpu=1 `
-  --set-env-vars NODE_ENV=production,APP_ENV=production,STORAGE_DRIVER=file,LOG_LEVEL=info
+  --set-env-vars "NODE_ENV=production,APP_ENV=production,STORAGE_DRIVER=file,LOG_LEVEL=info"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n✅ 部署成功！你可以在终端上方查看 Cloud Run 分配的公网 HTTPS/WSS 访问链接。" -ForegroundColor Green
