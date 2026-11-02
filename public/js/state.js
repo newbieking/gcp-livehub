@@ -41,6 +41,31 @@ class AppState {
 
     // 远端用户在私聊中的输入状态: userId -> boolean
     this.dmTypingStatus = new Map();
+
+    // 未读消息气泡计数器: scopeKey ('room:xxx' | 'dm:xxx') -> number
+    this.unreadCounts = new Map();
+  }
+
+  incrementUnread(scopeKey) {
+    const current = this.unreadCounts.get(scopeKey) || 0;
+    this.unreadCounts.set(scopeKey, current + 1);
+    return current + 1;
+  }
+
+  clearUnread(scopeKey) {
+    this.unreadCounts.delete(scopeKey);
+  }
+
+  getUnread(scopeKey) {
+    return this.unreadCounts.get(scopeKey) || 0;
+  }
+
+  getTotalUnread() {
+    let total = 0;
+    for (const count of this.unreadCounts.values()) {
+      total += count;
+    }
+    return total;
   }
 
   setUsername(name) {

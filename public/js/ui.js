@@ -107,6 +107,15 @@ export function renderOnlineUsers(onSelectUser) {
     content.appendChild(name);
     li.appendChild(content);
 
+    // 未读消息气泡（私聊）
+    const unread = state.getUnread(`dm:${user.userId}`);
+    if (unread > 0) {
+      const badge = document.createElement('span');
+      badge.className = 'unread-badge';
+      badge.textContent = unread > 99 ? '99+' : unread;
+      li.appendChild(badge);
+    }
+
     if (!isMe) {
       li.title = `点击与 ${user.username} 开启 1v1 私聊`;
       li.addEventListener('click', () => onSelectUser(user));
@@ -114,6 +123,60 @@ export function renderOnlineUsers(onSelectUser) {
 
     dom.onlineUserList.appendChild(li);
   });
+}
+
+/**
+ * 刷新公共房间未读消息气泡
+ */
+export function updateRoomBadges() {
+  document.querySelectorAll('#roomList li').forEach(li => {
+    const roomName = li.getAttribute('data-room');
+    const existingBadge = li.querySelector('.unread-badge');
+    const unread = state.getUnread(`room:${roomName}`);
+
+    if (unread > 0) {
+      if (existingBadge) {
+        existingBadge.textContent = unread > 99 ? '99+' : unread;
+      } else {
+        const badge = document.createElement('span');
+        badge.className = 'unread-badge';
+        badge.textContent = unread > 99 ? '99+' : unread;
+        li.appendChild(badge);
+      }
+    } else if (existingBadge) {
+      existingBadge.remove();
+    }
+  });
+}
+
+/**
+ * 动态确保房间存在于列表
+ */
+export function ensureRoomInList(roomName) {
+  let existing = document.querySelector(`#roomList li[data-room="${CSS.escape(roomName)}"]`);
+  if (!existing) {
+    const li = document.createElement('li');
+    li.setAttribute('data-room', roomName);
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'nav-item-title';
+    titleSpan.textContent = `📌 ${roomName}`;
+
+    li.appendChild(titleSpan);
+    dom.roomList.appendChild(li);
+  }
+}
+
+/**
+ * 更新浏览器标签页标题的未读提示
+ */
+export function updateDocumentTitle() {
+  const total = state.getTotalUnread();
+  if (total > 0) {
+    document.title = `(${total > 99 ? '99+' : total}) GCP LiveHub`;
+  } else {
+    document.title = 'Real-time Interactive Hub | GCP Cloud Run';
+  }
 }
 
 export function renderTypingIndicator() {

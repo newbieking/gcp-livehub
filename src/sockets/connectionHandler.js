@@ -14,6 +14,9 @@ export function registerConnectionHandlers(io, socket) {
     // 将该 socket 加入专属的用户私有频道 user:{userId}，用于定向私聊推送
     socket.join(`user:${session.userId}`);
 
+    // 默认加入公共频道，确保能跨频道接收消息与未读气泡提醒
+    ['大厅讨论区', '实时对战大厅', '多人协同白板'].forEach(room => socket.join(room));
+
     console.log(`[用户上线] ${session.username} (ID: ${session.userId}), Socket: ${socket.id}`);
 
     // 回执初始化成功

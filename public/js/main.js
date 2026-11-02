@@ -10,13 +10,18 @@ import {
   renderTypingIndicator,
   updateConnectionStatus,
   updateLatency,
-  updateTransport
+  updateTransport,
+  updateRoomBadges,
+  ensureRoomInList,
+  updateDocumentTitle
 } from './ui.js';
 
 // 初始化 UI
 initUIBindings();
 updateHeader();
 renderMessages();
+updateRoomBadges();
+updateDocumentTitle();
 
 // 初始化 Socket 连接
 const socket = createSocketConnection(
@@ -32,10 +37,17 @@ const socket = createSocketConnection(
 function switchToRoom(roomName) {
   if (!roomName) return;
 
+  ensureRoomInList(roomName);
+
+  // 清除该频道的未读消息计数
+  state.clearUnread(`room:${roomName}`);
   state.setActiveConversation('room', roomName, roomName);
+
   updateHeader();
   renderMessages();
   renderTypingIndicator();
+  updateRoomBadges();
+  updateDocumentTitle();
 
   // 更新左侧高亮
   document.querySelectorAll('#roomList li').forEach(li => {
@@ -48,20 +60,25 @@ function switchToRoom(roomName) {
 }
 
 function switchToDM(user) {
+  // 清除该用户的私聊未读消息计数
+  state.clearUnread(`dm:${user.userId}`);
   state.setActiveConversation('dm', user.userId, user.username);
+
   updateHeader();
   renderMessages();
   renderTypingIndicator();
+  updateDocumentTitle();
 
-  // 清除房间高亮，高亮当前私聊联系人
+  // 清除房间高亮，高亮当前私聊联系人并刷新气泡
   document.querySelectorAll('#roomList li').forEach(li => li.classList.remove('active'));
   renderOnlineUsers(switchToDM);
 }
 
 // 绑定公共房间点击
 dom.roomList.addEventListener('click', (e) => {
-  if (e.target.tagName === 'LI') {
-    const room = e.target.getAttribute('data-room');
+  const li = e.target.closest('li');
+  if (li && dom.roomList.contains(li)) {
+    const room = li.getAttribute('data-room');
     switchToRoom(room);
   }
 });
@@ -124,7 +141,7 @@ dom.messageForm.addEventListener('submit', (e) => {
     socket.emit('dm:typing', { toUserId, isTyping: false });
   } else {
     // 广播房间消息
-    socket.emit('room:message', { text });
+    socket.emit('room:message', { room: state.activeConversation.targetId, text });
   }
 
   dom.messageInput.value = '';
@@ -141,6 +158,12 @@ socket.on('room:new_message', (msg) => {
 
   if (state.activeConversation.type === 'room' && state.activeConversation.targetId === msg.room) {
     appendMessageElement(msg);
+  } else {
+    // 增加未读消息气泡计数
+    state.incrementUnread(roomKey);
+    ensureRoomInList(msg.room);
+    updateRoomBadges();
+    updateDocumentTitle();
   }
 });
 
@@ -154,6 +177,11 @@ socket.on('dm:new_message', (msg) => {
 
   if (state.activeConversation.type === 'dm' && state.activeConversation.targetId === conversationPartnerId) {
     appendMessageElement(msg);
+  } else if (!isMe) {
+    // 收到他人发来的未读私信，更新未读气泡
+    state.incrementUnread(dmKey);
+    renderOnlineUsers(switchToDM);
+    updateDocumentTitle();
   }
 });
 
