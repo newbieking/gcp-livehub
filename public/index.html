@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-time Interactive Hub | Socket.IO on Google Cloud</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 侧边栏：房间与用户 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-icon">⚡</div>
+          <div class="brand-text">
+            <h2>GCP LiveHub</h2>
+            <span class="badge-tech">Node.js + Socket.IO</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 用户设置 -->
+      <div class="profile-card">
+        <label for="usernameInput">当前昵称</label>
+        <div class="input-inline">
+          <input type="text" id="usernameInput" value="极客_001" maxlength="20" placeholder="输入昵称">
+          <button id="saveUsernameBtn" title="更新昵称">✓</button>
+        </div>
+      </div>
+
+      <!-- 快速切换房间 -->
+      <div class="room-section">
+        <h3>频道列表</h3>
+        <ul class="room-list" id="roomList">
+          <li class="active" data-room="大厅讨论区">💬 大厅讨论区</li>
+          <li data-room="实时对战大厅">🎮 实时对战大厅</li>
+          <li data-room="多人协同白板">📝 多人协同白板</li>
+          <li data-room="金融行情广播">📈 金融行情广播</li>
+        </ul>
+        <div class="custom-room-box">
+          <input type="text" id="customRoomInput" placeholder="自定义频道名称...">
+          <button id="joinCustomRoomBtn">进入</button>
+        </div>
+      </div>
+
+      <!-- 当前房间在线成员 -->
+      <div class="members-section">
+        <div class="members-title">
+          <span>在线成员</span>
+          <span class="member-count-pill" id="memberCountPill">0</span>
+        </div>
+        <ul class="member-list" id="memberList">
+          <!-- 动态加载 -->
+        </ul>
+      </div>
+
+      <!-- 网络状态与重连测试控制台 -->
+      <div class="sidebar-footer">
+        <div class="connection-status">
+          <span class="status-indicator" id="statusDot"></span>
+          <span id="statusText">正在连接...</span>
+          <span class="latency" id="latencyText">-- ms</span>
+        </div>
+        <div class="actions-group">
+          <button id="reconnectTestBtn" class="btn-sm btn-outline">模拟断开重连</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主聊天/交互视口 -->
+    <main class="chat-viewport">
+      <!-- 视口顶栏 -->
+      <header class="chat-header">
+        <div class="room-info">
+          <h1 id="currentRoomTitle">💬 大厅讨论区</h1>
+          <p id="roomDesc">实时双向交互演示 · 支持毫秒级低延迟房间广播与断线重连</p>
+        </div>
+        <div class="header-tools">
+          <span class="transport-tag" id="transportTag">Transport: --</span>
+        </div>
+      </header>
+
+      <!-- 消息流动展示区域 -->
+      <section class="messages-container" id="messagesContainer">
+        <!-- 动态消息流 -->
+      </section>
+
+      <!-- 正在输入提示 -->
+      <div class="typing-indicator" id="typingIndicator">
+        <!-- "某某正在输入..." -->
+      </div>
+
+      <!-- 输入栏 -->
+      <footer class="chat-input-bar">
+        <form id="messageForm" class="message-form">
+          <input 
+            type="text" 
+            id="messageInput" 
+            placeholder="输入消息，按 Enter 发送..." 
+            autocomplete="off" 
+            maxlength="1000"
+          >
+          <button type="submit" id="sendBtn">
+            <span>发送</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </form>
+      </footer>
+    </main>
+  </div>
+
+  <!-- 引入 Socket.IO 官方客户端脚本 (由服务端动态托管) -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
