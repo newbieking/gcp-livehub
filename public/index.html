@@ -3,43 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Real-time Interactive Hub | Socket.IO on Google Cloud</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Real-time Interactive Hub | GCP Cloud Run</title>
+  <link rel="stylesheet" href="css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="app-container">
-    <!-- 侧边栏：房间与用户 -->
+    <!-- 侧边导航栏 -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="brand">
           <div class="brand-icon">⚡</div>
           <div class="brand-text">
             <h2>GCP LiveHub</h2>
-            <span class="badge-tech">Node.js + Socket.IO</span>
+            <span class="badge-tech">ESM + Socket.IO</span>
           </div>
         </div>
       </div>
 
-      <!-- 用户设置 -->
+      <!-- 用户身份配置 -->
       <div class="profile-card">
-        <label for="usernameInput">当前昵称</label>
+        <div class="profile-meta">
+          <label for="usernameInput">当前昵称</label>
+          <span class="user-id-tag" id="userIdTag">ID: --</span>
+        </div>
         <div class="input-inline">
-          <input type="text" id="usernameInput" value="极客_001" maxlength="20" placeholder="输入昵称">
-          <button id="saveUsernameBtn" title="更新昵称">✓</button>
+          <input type="text" id="usernameInput" maxlength="20" placeholder="设置你的昵称">
+          <button id="saveUsernameBtn" title="保存昵称">✓</button>
         </div>
       </div>
 
-      <!-- 快速切换房间 -->
-      <div class="room-section">
-        <h3>频道列表</h3>
-        <ul class="room-list" id="roomList">
+      <!-- 频道与私聊会话切换 -->
+      <div class="nav-section">
+        <div class="section-title">📢 公共频道</div>
+        <ul class="nav-list" id="roomList">
           <li class="active" data-room="大厅讨论区">💬 大厅讨论区</li>
           <li data-room="实时对战大厅">🎮 实时对战大厅</li>
           <li data-room="多人协同白板">📝 多人协同白板</li>
-          <li data-room="金融行情广播">📈 金融行情广播</li>
         </ul>
         <div class="custom-room-box">
           <input type="text" id="customRoomInput" placeholder="自定义频道名称...">
@@ -47,37 +49,39 @@
         </div>
       </div>
 
-      <!-- 当前房间在线成员 -->
-      <div class="members-section">
-        <div class="members-title">
-          <span>在线成员</span>
-          <span class="member-count-pill" id="memberCountPill">0</span>
+      <!-- 在线用户列表（点击即刻发起 1v1 私聊） -->
+      <div class="nav-section users-section">
+        <div class="section-title">
+          <span>💬 私聊会话 / 在线用户</span>
+          <span class="online-count-badge" id="onlineCountBadge">0</span>
         </div>
-        <ul class="member-list" id="memberList">
-          <!-- 动态加载 -->
+        <p class="section-hint">点击任意成员直接开启 1v1 私聊与输入状态感知</p>
+        <ul class="nav-list user-list" id="onlineUserList">
+          <!-- 动态渲染在线用户 -->
         </ul>
       </div>
 
-      <!-- 网络状态与重连测试控制台 -->
+      <!-- 底部网络状态与诊断 -->
       <div class="sidebar-footer">
         <div class="connection-status">
           <span class="status-indicator" id="statusDot"></span>
           <span id="statusText">正在连接...</span>
           <span class="latency" id="latencyText">-- ms</span>
         </div>
-        <div class="actions-group">
-          <button id="reconnectTestBtn" class="btn-sm btn-outline">模拟断开重连</button>
-        </div>
+        <button id="reconnectTestBtn" class="btn-sm btn-outline">模拟网络断开与重连</button>
       </div>
     </aside>
 
-    <!-- 主聊天/交互视口 -->
+    <!-- 主聊天工作区 -->
     <main class="chat-viewport">
       <!-- 视口顶栏 -->
       <header class="chat-header">
         <div class="room-info">
-          <h1 id="currentRoomTitle">💬 大厅讨论区</h1>
-          <p id="roomDesc">实时双向交互演示 · 支持毫秒级低延迟房间广播与断线重连</p>
+          <div class="header-title-row">
+            <span class="chat-mode-badge" id="chatModeBadge">公共频道</span>
+            <h1 id="chatTitle">💬 大厅讨论区</h1>
+          </div>
+          <p id="chatSubtitle">已连接至云端实时长连接通道</p>
         </div>
         <div class="header-tools">
           <span class="transport-tag" id="transportTag">Transport: --</span>
@@ -89,12 +93,12 @@
         <!-- 动态消息流 -->
       </section>
 
-      <!-- 正在输入提示 -->
-      <div class="typing-indicator" id="typingIndicator">
-        <!-- "某某正在输入..." -->
+      <!-- 实时输入指示器 (特别在 1v1 私聊中定向展示) -->
+      <div class="typing-indicator-bar" id="typingIndicatorBar">
+        <span class="typing-text" id="typingText"></span>
       </div>
 
-      <!-- 输入栏 -->
+      <!-- 底部发送栏 -->
       <footer class="chat-input-bar">
         <form id="messageForm" class="message-form">
           <input 
@@ -116,8 +120,9 @@
     </main>
   </div>
 
-  <!-- 引入 Socket.IO 官方客户端脚本 (由服务端动态托管) -->
+  <!-- 引入官方 Socket.IO 运行时 (服务端自动托管) -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js"></script>
+  <!-- 前端入口采用 ESModule 规范 -->
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

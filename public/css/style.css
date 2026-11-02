@@ -2,24 +2,24 @@
   --bg-primary: #0f172a;
   --bg-secondary: #1e293b;
   --bg-tertiary: #334155;
-  --bg-input: #1e293b;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
   --accent: #38bdf8;
   --accent-hover: #0ea5e9;
-  --accent-dim: rgba(56, 189, 248, 0.15);
+  --accent-dim: rgba(56, 189, 248, 0.12);
+  --dm-badge: #c084fc;
+  --dm-badge-bg: rgba(192, 132, 252, 0.15);
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
   --bubble-self: #0284c7;
   --bubble-other: #334155;
+  --bubble-dm: #6366f1;
   --border-color: rgba(255, 255, 255, 0.08);
-  --radius-lg: 14px;
+  --radius-lg: 12px;
   --radius-md: 8px;
   --radius-sm: 6px;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -45,13 +45,13 @@ body {
 
 /* 侧边栏 */
 .sidebar {
-  width: 320px;
+  width: 330px;
   background-color: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  padding: 18px;
-  gap: 16px;
+  padding: 16px;
+  gap: 14px;
   flex-shrink: 0;
 }
 
@@ -62,26 +62,26 @@ body {
 }
 
 .brand-icon {
-  font-size: 24px;
+  font-size: 22px;
   background: linear-gradient(135deg, #38bdf8, #818cf8);
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.3);
 }
 
 .brand-text h2 {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: -0.5px;
 }
 
 .badge-tech {
   display: inline-block;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--accent);
   background: var(--accent-dim);
   padding: 2px 6px;
@@ -89,25 +89,36 @@ body {
   font-weight: 600;
 }
 
+/* 用户信息卡片 */
 .profile-card {
   background: rgba(15, 23, 42, 0.6);
-  padding: 12px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
 }
 
-.profile-card label {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--text-muted);
+.profile-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 6px;
+}
+
+.profile-meta label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+}
+
+.user-id-tag {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  font-family: monospace;
 }
 
 .input-inline {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .input-inline input {
@@ -115,9 +126,9 @@ body {
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   color: var(--text-main);
-  padding: 8px 10px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   outline: none;
 }
 
@@ -136,50 +147,100 @@ body {
   transition: all 0.2s;
 }
 
-.input-inline button:hover {
-  background: var(--accent-hover);
-}
-
-/* 房间列表 */
-.room-section {
+/* 导航区块 */
+.nav-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
-.room-section h3, .members-title span:first-child {
-  font-size: 0.75rem;
+.nav-section.users-section {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.room-list {
+.section-hint {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  margin-top: -2px;
+}
+
+.online-count-badge {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.nav-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
-.room-list li {
-  padding: 9px 12px;
+.user-list {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+
+.nav-list li {
+  padding: 8px 12px;
   border-radius: var(--radius-sm);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   cursor: pointer;
   color: var(--text-muted);
   transition: all 0.15s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.room-list li:hover {
+.nav-list li:hover {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-main);
 }
 
-.room-list li.active {
+.nav-list li.active {
   background: var(--accent-dim);
   color: var(--accent);
   font-weight: 600;
   border-left: 3px solid var(--accent);
+}
+
+.user-list li.active {
+  background: var(--dm-badge-bg);
+  color: var(--dm-badge);
+  border-left: 3px solid var(--dm-badge);
+}
+
+.user-item-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-indicator-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--success);
+  border-radius: 50%;
 }
 
 .custom-room-box {
@@ -209,104 +270,51 @@ body {
   cursor: pointer;
 }
 
-/* 在线成员 */
-.members-section {
-  flex: 1;
-  min-height: 100px;
-  overflow-y: auto;
-  border-top: 1px solid var(--border-color);
-  padding-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.members-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.member-count-pill {
-  background: var(--accent-dim);
-  color: var(--accent);
-  font-size: 0.75rem;
-  font-weight: bold;
-  padding: 1px 7px;
-  border-radius: 10px;
-}
-
-.member-list {
-  list-style: none;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.member-list li {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 0;
-}
-
-.member-list li::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  background: var(--success);
-  border-radius: 50%;
-}
-
 /* 侧边栏底部 */
 .sidebar-footer {
   border-top: 1px solid var(--border-color);
   padding-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .connection-status {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 
 .status-indicator {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--warning);
   box-shadow: 0 0 6px var(--warning);
-  transition: all 0.3s;
 }
 
 .status-indicator.connected {
   background: var(--success);
-  box-shadow: 0 0 8px var(--success);
+  box-shadow: 0 0 6px var(--success);
 }
 
 .status-indicator.disconnected {
   background: var(--danger);
-  box-shadow: 0 0 8px var(--danger);
+  box-shadow: 0 0 6px var(--danger);
 }
 
 .latency {
   margin-left: auto;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-dim);
   font-family: monospace;
 }
 
 .btn-sm {
-  padding: 6px 12px;
-  font-size: 0.8rem;
+  padding: 6px 10px;
+  font-size: 0.78rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s;
@@ -322,7 +330,6 @@ body {
 .btn-outline:hover {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-main);
-  border-color: var(--text-dim);
 }
 
 /* 主视口 */
@@ -334,13 +341,33 @@ body {
 }
 
 .chat-header {
-  padding: 16px 24px;
+  padding: 14px 24px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(10px);
+}
+
+.header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-mode-badge {
+  font-size: 0.7rem;
+  background: var(--accent-dim);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.chat-mode-badge.dm {
+  background: var(--dm-badge-bg);
+  color: var(--dm-badge);
 }
 
 .room-info h1 {
@@ -349,7 +376,7 @@ body {
 }
 
 .room-info p {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -367,7 +394,7 @@ body {
 /* 消息流 */
 .messages-container {
   flex: 1;
-  padding: 24px;
+  padding: 20px 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -377,12 +404,12 @@ body {
 .message-item {
   display: flex;
   flex-direction: column;
-  max-width: 70%;
-  animation: fadeIn 0.2s ease-out;
+  max-width: 65%;
+  animation: fadeIn 0.15s ease-out;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -395,11 +422,11 @@ body {
 }
 
 .message-meta {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-dim);
   margin-bottom: 4px;
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .message-item.self .message-meta {
@@ -407,10 +434,10 @@ body {
 }
 
 .message-bubble {
-  padding: 10px 15px;
+  padding: 10px 14px;
   border-radius: 12px;
-  font-size: 0.92rem;
-  line-height: 1.5;
+  font-size: 0.9rem;
+  line-height: 1.45;
   word-break: break-word;
 }
 
@@ -420,44 +447,47 @@ body {
   border-bottom-right-radius: 2px;
 }
 
+.message-item.self.dm .message-bubble {
+  background: var(--bubble-dm);
+}
+
 .message-item.other .message-bubble {
   background: var(--bubble-other);
   color: var(--text-main);
   border-bottom-left-radius: 2px;
 }
 
-/* 系统通知消息 */
 .system-notice {
   align-self: center;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: var(--text-dim);
   background: rgba(255, 255, 255, 0.04);
-  padding: 4px 14px;
-  border-radius: 12px;
-  margin: 4px 0;
+  padding: 3px 12px;
+  border-radius: 10px;
+  margin: 3px 0;
 }
 
-/* 输入中状态 */
-.typing-indicator {
-  height: 24px;
+/* 输入指示器 */
+.typing-indicator-bar {
+  height: 22px;
   padding: 0 24px;
   font-size: 0.75rem;
-  color: var(--accent);
+  color: var(--dm-badge);
   display: flex;
   align-items: center;
   font-style: italic;
 }
 
-/* 输入框底部栏 */
+/* 输入框 */
 .chat-input-bar {
-  padding: 16px 24px 20px;
+  padding: 14px 24px 18px;
   background: rgba(15, 23, 42, 0.85);
   border-top: 1px solid var(--border-color);
 }
 
 .message-form {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .message-form input {
@@ -465,33 +495,30 @@ body {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   color: var(--text-main);
-  padding: 12px 18px;
+  padding: 10px 16px;
   border-radius: var(--radius-lg);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   outline: none;
   transition: all 0.2s;
 }
 
 .message-form input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-dim);
 }
 
 .message-form button {
   background: var(--accent);
   color: #0f172a;
   border: none;
-  padding: 0 22px;
+  padding: 0 20px;
   border-radius: var(--radius-lg);
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.2s;
 }
 
 .message-form button:hover {
   background: var(--accent-hover);
-  transform: translateY(-1px);
 }
