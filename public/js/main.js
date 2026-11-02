@@ -58,6 +58,12 @@ function switchToRoom(roomName) {
 
   // 通知服务器切换房间
   socket.emit('room:join', { room: roomName });
+
+  // 向服务端发送权威已读水位线确认 (Read Ack)
+  socket.emit('read:ack', {
+    targetId: `room:${roomName}`,
+    lastReadTime: Date.now()
+  });
 }
 
 function switchToDM(user) {
@@ -76,6 +82,12 @@ function switchToDM(user) {
 
   // 从服务端拉取该私聊的持久化历史记录
   socket.emit('dm:load_history', { toUserId: user.userId });
+
+  // 向服务端发送权威已读水位线确认 (Read Ack)
+  socket.emit('read:ack', {
+    targetId: `dm:${user.userId}`,
+    lastReadTime: Date.now()
+  });
 }
 
 // 绑定公共房间点击
@@ -162,6 +174,11 @@ socket.on('room:new_message', (msg) => {
 
   if (state.activeConversation.type === 'room' && state.activeConversation.targetId === msg.room) {
     appendMessageElement(msg);
+    // 处于当前窗口，直接向服务端上报已读水位线
+    socket.emit('read:ack', {
+      targetId: roomKey,
+      lastReadTime: msg.createdAt || Date.now()
+    });
   } else {
     // 增加未读消息气泡计数
     state.incrementUnread(roomKey);
@@ -185,12 +202,38 @@ socket.on('dm:new_message', (msg) => {
 
   if (state.activeConversation.type === 'dm' && state.activeConversation.targetId === conversationPartnerId) {
     appendMessageElement(msg);
+    // 处于当前窗口，直接向服务端上报已读水位线
+    socket.emit('read:ack', {
+      targetId: dmKey,
+      lastReadTime: msg.createdAt || Date.now()
+    });
   } else if (!isMe) {
     // 收到他人发来的未读私信，更新未读气泡并持久化
     state.incrementUnread(dmKey);
     renderOnlineUsers(switchToDM);
     updateDocumentTitle();
   }
+});
+
+// 服务端权威握手回执 (SSOT: 下发权威未读汇总与最近联系人)
+socket.on('auth:init_success', ({ unreadSummary, recentConversations }) => {
+  if (unreadSummary) {
+    state.setServerUnreadSummary(unreadSummary);
+  }
+  if (recentConversations) {
+    state.setServerRecentConversations(recentConversations);
+  }
+  updateRoomBadges();
+  renderOnlineUsers(switchToDM);
+  updateDocumentTitle();
+});
+
+// 服务端已读广播同步 (用于多端/多标签页同一用户的已读消除)
+socket.on('read:synced', ({ targetId }) => {
+  state.clearUnread(targetId);
+  updateRoomBadges();
+  renderOnlineUsers(switchToDM);
+  updateDocumentTitle();
 });
 
 // 收到 1v1 定向打字状态感知

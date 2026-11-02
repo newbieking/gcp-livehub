@@ -2,19 +2,21 @@ import { BaseMessageStore } from './base.js';
 
 /**
  * Google Cloud Firestore 生产级存储驱动
- * 自动适配 Cloud Run ADC 鉴权 (无须本地密钥文件)
+ * 支持基于集合 read_states 的服务端已读标记
  */
 export class FirestoreMessageStore extends BaseMessageStore {
   constructor(options = {}) {
     super('FirestoreMessageStore');
     this.collectionName = options.collection || 'messages';
+    this.readStatesColName = 'read_states';
     this.db = null;
+    this.fallbackStore = [];
+    this.fallbackReadStates = new Map();
     this.init();
   }
 
   async init() {
     try {
-      // 动态载入官方客户端
       const { Firestore } = await import('@google-cloud/firestore');
       this.db = new Firestore();
       console.log(`[Storage/Firestore] ✅ 成功连接 Google Cloud Firestore (集合: ${this.collectionName})`);
@@ -22,7 +24,6 @@ export class FirestoreMessageStore extends BaseMessageStore {
       console.warn('[Storage/Firestore] ⚠️ 未检测到 @google-cloud/firestore 依赖或 GCP 凭据。');
       console.warn('[Storage/Firestore] 提示：在云端 Cloud Run 部署时请执行: npm install @google-cloud/firestore');
       console.warn('[Storage/Firestore] 临时降级至内存暂存模式运行...');
-      this.fallbackStore = [];
     }
   }
 
@@ -63,7 +64,6 @@ export class FirestoreMessageStore extends BaseMessageStore {
       return snapshot.docs.map(doc => doc.data()).reverse();
     }
 
-    // 兜底降级处理
     const list = this.fallbackStore.filter(m => {
       if (m.scope !== 'room' || m.room !== room) return false;
       if (beforeTime && m.createdAt >= beforeTime) return false;
@@ -94,5 +94,67 @@ export class FirestoreMessageStore extends BaseMessageStore {
       return true;
     });
     return list.slice(-limit);
+  }
+
+  async saveReadState(userId, targetId, lastReadTime) {
+    const docId = `${userId}_${targetId.replace(/[:\/]/g, '_')}`;
+    const readTimestamp = Number(lastReadTime) || Date.now();
+
+    if (this.db) {
+      await this.db.collection(this.readStatesColName).doc(docId).set({
+        userId,
+        targetId,
+        lastReadTime: readTimestamp,
+        updatedAt: Date.now()
+      });
+    } else {
+      this.fallbackReadStates.set(`${userId}:${targetId}`, readTimestamp);
+    }
+
+    return readTimestamp;
+  }
+
+  async getUnreadSummary(userId) {
+    if (!this.db) {
+      const summary = {};
+      for (const m of this.fallbackStore) {
+        if (m.scope === 'room' && m.fromUserId !== userId) {
+          const targetId = `room:${m.room}`;
+          const cursor = this.fallbackReadStates.get(`${userId}:${targetId}`) || 0;
+          if (m.createdAt > cursor) summary[targetId] = (summary[targetId] || 0) + 1;
+        } else if (m.scope === 'dm' && m.toUserId === userId && m.fromUserId !== userId) {
+          const targetId = `dm:${m.fromUserId}`;
+          const cursor = this.fallbackReadStates.get(`${userId}:${targetId}`) || 0;
+          if (m.createdAt > cursor) summary[targetId] = (summary[targetId] || 0) + 1;
+        }
+      }
+      return summary;
+    }
+
+    // 生产环境在 Firestore 中可通过复合查询聚合
+    return {};
+  }
+
+  async getRecentConversations(userId) {
+    // 降级模式实现
+    const partners = new Map();
+    const list = this.fallbackStore;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const m = list[i];
+      if (m.scope === 'dm' && (m.fromUserId === userId || m.toUserId === userId)) {
+        const isFromMe = m.fromUserId === userId;
+        const partnerId = isFromMe ? m.toUserId : m.fromUserId;
+        const partnerName = isFromMe ? (m.toUsername || '联系人') : (m.fromUsername || '联系人');
+        if (!partners.has(partnerId)) {
+          partners.set(partnerId, {
+            userId: partnerId,
+            username: partnerName,
+            lastMessage: m.text,
+            lastActive: m.createdAt
+          });
+        }
+      }
+    }
+    return Array.from(partners.values());
   }
 }

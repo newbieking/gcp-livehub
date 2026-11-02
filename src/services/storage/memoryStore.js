@@ -7,6 +7,7 @@ export class MemoryMessageStore extends BaseMessageStore {
   constructor() {
     super('MemoryMessageStore');
     this.messages = [];
+    this.readStates = new Map();
     console.log('[Storage/Memory] 已启用纯内存驱动 (不落盘，重启自动重置)');
   }
 
@@ -47,5 +48,72 @@ export class MemoryMessageStore extends BaseMessageStore {
     });
 
     return list.slice(-limit);
+  }
+
+  async saveReadState(userId, targetId, lastReadTime) {
+    const key = `${userId}:${targetId}`;
+    const readTimestamp = Number(lastReadTime) || Date.now();
+    this.readStates.set(key, {
+      userId,
+      targetId,
+      lastReadTime: readTimestamp,
+      updatedAt: Date.now()
+    });
+    return readTimestamp;
+  }
+
+  getReadStateTime(userId, targetId) {
+    const key = `${userId}:${targetId}`;
+    const record = this.readStates.get(key);
+    return record ? record.lastReadTime : 0;
+  }
+
+  async getUnreadSummary(userId) {
+    const summary = {};
+
+    for (const m of this.messages) {
+      if (m.scope === 'room') {
+        if (m.fromUserId === userId) continue;
+        const targetId = `room:${m.room}`;
+        const cursor = this.getReadStateTime(userId, targetId);
+        if (m.createdAt > cursor) {
+          summary[targetId] = (summary[targetId] || 0) + 1;
+        }
+      } else if (m.scope === 'dm') {
+        if (m.toUserId === userId && m.fromUserId !== userId) {
+          const targetId = `dm:${m.fromUserId}`;
+          const cursor = this.getReadStateTime(userId, targetId);
+          if (m.createdAt > cursor) {
+            summary[targetId] = (summary[targetId] || 0) + 1;
+          }
+        }
+      }
+    }
+
+    return summary;
+  }
+
+  async getRecentConversations(userId) {
+    const partners = new Map();
+
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      const m = this.messages[i];
+      if (m.scope === 'dm' && (m.fromUserId === userId || m.toUserId === userId)) {
+        const isFromMe = m.fromUserId === userId;
+        const partnerId = isFromMe ? m.toUserId : m.fromUserId;
+        const partnerName = isFromMe ? (m.toUsername || '联系人') : (m.fromUsername || '联系人');
+
+        if (!partners.has(partnerId)) {
+          partners.set(partnerId, {
+            userId: partnerId,
+            username: partnerName,
+            lastMessage: m.text,
+            lastActive: m.createdAt
+          });
+        }
+      }
+    }
+
+    return Array.from(partners.values()).sort((a, b) => b.lastActive - a.lastActive);
   }
 }

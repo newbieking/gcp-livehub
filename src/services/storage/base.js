@@ -45,4 +45,32 @@ export class BaseMessageStore {
   async getDMHistory(userA, userB, limit = 50, beforeTime = null) {
     throw new Error(`[${this.driverName}] getDMHistory 方法未实现`);
   }
+
+  /**
+   * 保存用户在特定会话的水位线 (Read Cursor)
+   * @param {string} userId
+   * @param {string} targetId (e.g. 'room:大厅讨论区' 或 'dm:u_123:u_456')
+   * @param {number} lastReadTime
+   */
+  async saveReadState(userId, targetId, lastReadTime) {
+    throw new Error(`[${this.driverName}] saveReadState 方法未实现`);
+  }
+
+  /**
+   * 计算指定用户所有会话的服务端权威未读计数
+   * @param {string} userId
+   * @returns {Promise<Object>} e.g. { 'room:大厅讨论区': 0, 'dm:u_456': 2 }
+   */
+  async getUnreadSummary(userId) {
+    throw new Error(`[${this.driverName}] getUnreadSummary 方法未实现`);
+  }
+
+  /**
+   * 获取指定用户的最近私聊联系人列表（服务端权威聚合）
+   * @param {string} userId
+   * @returns {Promise<Array>}
+   */
+  async getRecentConversations(userId) {
+    throw new Error(`[${this.driverName}] getRecentConversations 方法未实现`);
+  }
 }

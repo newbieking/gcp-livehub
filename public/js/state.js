@@ -106,6 +106,28 @@ class AppState {
     }
   }
 
+  /**
+   * 载入服务端权威下发的未读概览 (SSOT)
+   */
+  setServerUnreadSummary(summary = {}) {
+    this.unreadCounts = new Map(Object.entries(summary));
+    // 消除当前正在查看的会话的未读
+    this.clearUnread(this.getActiveKey());
+    this.saveUnreadToStorage();
+  }
+
+  /**
+   * 载入服务端权威下发的最近会话联系人 (SSOT)
+   */
+  setServerRecentConversations(conversations = []) {
+    const onlineSet = new Set(this.onlineUsers.map(u => u.userId));
+    conversations.forEach(c => {
+      if (c.userId !== this.user.userId) {
+        this.recordContact(c.userId, c.username, onlineSet.has(c.userId));
+      }
+    });
+  }
+
   recordContact(userId, username, isOnline = false) {
     if (!userId || userId === this.user.userId) return;
     const existing = this.contacts.get(userId) || {};
