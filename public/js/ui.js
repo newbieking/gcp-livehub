@@ -166,21 +166,6 @@ export function updateRoomBadges() {
   });
 }
 
-    if (unread > 0) {
-      if (existingBadge) {
-        existingBadge.textContent = unread > 99 ? '99+' : unread;
-      } else {
-        const badge = document.createElement('span');
-        badge.className = 'unread-badge';
-        badge.textContent = unread > 99 ? '99+' : unread;
-        li.appendChild(badge);
-      }
-    } else if (existingBadge) {
-      existingBadge.remove();
-    }
-  });
-}
-
 /**
  * 动态确保房间存在于列表
  */
