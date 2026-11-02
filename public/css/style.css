@@ -277,6 +277,17 @@ body {
   height: 7px;
   background: var(--success);
   border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-indicator-dot.offline {
+  background: var(--text-dim);
+}
+
+.user-offline-tag {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  margin-left: 4px;
 }
 
 .custom-room-box {

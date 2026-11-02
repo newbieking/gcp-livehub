@@ -21,6 +21,7 @@ initUIBindings();
 updateHeader();
 renderMessages();
 updateRoomBadges();
+renderOnlineUsers(switchToDM);
 updateDocumentTitle();
 
 // 初始化 Socket 连接
@@ -174,14 +175,18 @@ socket.on('room:new_message', (msg) => {
 socket.on('dm:new_message', (msg) => {
   const isMe = msg.fromUserId === state.user.userId;
   const conversationPartnerId = isMe ? msg.toUserId : msg.fromUserId;
+  const partnerName = isMe ? (msg.toUsername || '联系人') : (msg.fromUsername || '联系人');
   const dmKey = `dm:${conversationPartnerId}`;
+
+  // 记录联系人到持久化列表 (跨刷新不丢失)
+  state.recordContact(conversationPartnerId, partnerName, true);
 
   state.addMessage(dmKey, msg);
 
   if (state.activeConversation.type === 'dm' && state.activeConversation.targetId === conversationPartnerId) {
     appendMessageElement(msg);
   } else if (!isMe) {
-    // 收到他人发来的未读私信，更新未读气泡
+    // 收到他人发来的未读私信，更新未读气泡并持久化
     state.incrementUnread(dmKey);
     renderOnlineUsers(switchToDM);
     updateDocumentTitle();
@@ -223,7 +228,7 @@ socket.on('system:message', (sys) => {
 
 // 在线用户全局刷新
 socket.on('users:online_updated', ({ users }) => {
-  state.onlineUsers = users;
+  state.syncOnlineUsers(users);
   renderOnlineUsers(switchToDM);
 });
 

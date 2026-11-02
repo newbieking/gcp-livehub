@@ -3,7 +3,10 @@
  */
 export const STORAGE_KEYS = {
   USER_ID: 'livehub_user_id',
-  USERNAME: 'livehub_username'
+  USERNAME: 'livehub_username',
+  UNREAD_PREFIX: 'livehub_unread_',
+  CONTACTS_PREFIX: 'livehub_contacts_',
+  LAST_READ_PREFIX: 'livehub_last_read_'
 };
 
 export const DEFAULT_ROOM = '大厅讨论区';

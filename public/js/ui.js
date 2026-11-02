@@ -84,11 +84,13 @@ export function appendMessageElement(msg) {
 
 export function renderOnlineUsers(onSelectUser) {
   dom.onlineUserList.innerHTML = '';
-  const users = state.onlineUsers;
-  dom.onlineCountBadge.textContent = users.length;
+  const contacts = state.getContactsList();
+  dom.onlineCountBadge.textContent = state.onlineUsers.length;
 
-  users.forEach(user => {
+  contacts.forEach(user => {
     const isMe = user.userId === state.user.userId;
+    if (isMe) return; // 不在私聊列表显示自己
+
     const isSelected = state.activeConversation.type === 'dm' && state.activeConversation.targetId === user.userId;
 
     const li = document.createElement('li');
@@ -98,16 +100,24 @@ export function renderOnlineUsers(onSelectUser) {
     content.className = 'user-item-content';
 
     const dot = document.createElement('span');
-    dot.className = 'status-indicator-dot';
+    dot.className = `status-indicator-dot ${user.isOnline ? 'online' : 'offline'}`;
 
     const name = document.createElement('span');
-    name.textContent = isMe ? `${user.username} (我)` : user.username;
+    name.textContent = user.username;
 
     content.appendChild(dot);
     content.appendChild(name);
+
+    if (!user.isOnline) {
+      const offlineTag = document.createElement('span');
+      offlineTag.className = 'user-offline-tag';
+      offlineTag.textContent = '(离线)';
+      content.appendChild(offlineTag);
+    }
+
     li.appendChild(content);
 
-    // 未读消息气泡（私聊）
+    // 未读消息气泡（私聊）- 从持久化 state 读取
     const unread = state.getUnread(`dm:${user.userId}`);
     if (unread > 0) {
       const badge = document.createElement('span');
@@ -116,10 +126,8 @@ export function renderOnlineUsers(onSelectUser) {
       li.appendChild(badge);
     }
 
-    if (!isMe) {
-      li.title = `点击与 ${user.username} 开启 1v1 私聊`;
-      li.addEventListener('click', () => onSelectUser(user));
-    }
+    li.title = `点击与 ${user.username} 开启 1v1 私聊 ${user.isOnline ? '(在线)' : '(离线)'}`;
+    li.addEventListener('click', () => onSelectUser(user));
 
     dom.onlineUserList.appendChild(li);
   });
@@ -129,10 +137,34 @@ export function renderOnlineUsers(onSelectUser) {
  * 刷新公共房间未读消息气泡
  */
 export function updateRoomBadges() {
+  // 1. 确保所有有未读消息的房间都被动态呈现在侧边栏中
+  for (const key of state.unreadCounts.keys()) {
+    if (key.startsWith('room:')) {
+      const roomName = key.replace(/^room:/, '');
+      ensureRoomInList(roomName);
+    }
+  }
+
+  // 2. 刷新所有房间项的未读徽标
   document.querySelectorAll('#roomList li').forEach(li => {
     const roomName = li.getAttribute('data-room');
     const existingBadge = li.querySelector('.unread-badge');
     const unread = state.getUnread(`room:${roomName}`);
+
+    if (unread > 0) {
+      if (existingBadge) {
+        existingBadge.textContent = unread > 99 ? '99+' : unread;
+      } else {
+        const badge = document.createElement('span');
+        badge.className = 'unread-badge';
+        badge.textContent = unread > 99 ? '99+' : unread;
+        li.appendChild(badge);
+      }
+    } else if (existingBadge) {
+      existingBadge.remove();
+    }
+  });
+}
 
     if (unread > 0) {
       if (existingBadge) {

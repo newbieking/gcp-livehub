@@ -13,12 +13,15 @@ export function registerDirectMessageHandlers(io, socket) {
     const cleanText = (text || '').trim().slice(0, 1000);
     if (!cleanText) return;
 
+    const targetSession = sessionStore.getUserByUserId(toUserId);
+
     const messagePayload = {
       id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       scope: 'dm',
       fromUserId: session.userId,
       fromUsername: session.username,
       toUserId,
+      toUsername: targetSession ? targetSession.username : '联系人',
       text: cleanText,
       time: new Date().toLocaleTimeString(),
       createdAt: Date.now()

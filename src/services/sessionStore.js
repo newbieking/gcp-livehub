@@ -37,6 +37,15 @@ class SessionStore {
     return this.sessions.get(socketId);
   }
 
+  getUserByUserId(userId) {
+    const socketSet = this.userSockets.get(userId);
+    if (socketSet && socketSet.size > 0) {
+      const firstSocketId = socketSet.values().next().value;
+      return this.sessions.get(firstSocketId);
+    }
+    return null;
+  }
+
   removeSession(socketId) {
     const session = this.sessions.get(socketId);
     if (!session) return null;

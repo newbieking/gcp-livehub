@@ -42,18 +42,122 @@ class AppState {
     // 远端用户在私聊中的输入状态: userId -> boolean
     this.dmTypingStatus = new Map();
 
-    // 未读消息气泡计数器: scopeKey ('room:xxx' | 'dm:xxx') -> number
-    this.unreadCounts = new Map();
+    // 最近联系人列表 (跨刷新持久化): userId -> { userId, username, isOnline: boolean }
+    this.contacts = this.loadContactsFromStorage();
+
+    // 未读消息气泡计数器 (跨刷新持久化): scopeKey ('room:xxx' | 'dm:xxx') -> number
+    this.unreadCounts = this.loadUnreadFromStorage();
+
+    // 默认进入房间时，消除默认房间本身的未读
+    this.clearUnread(`room:${DEFAULT_ROOM}`);
+  }
+
+  getUnreadStorageKey() {
+    return `${STORAGE_KEYS.UNREAD_PREFIX}${this.user.userId}`;
+  }
+
+  getContactsStorageKey() {
+    return `${STORAGE_KEYS.CONTACTS_PREFIX}${this.user.userId}`;
+  }
+
+  loadUnreadFromStorage() {
+    try {
+      const raw = localStorage.getItem(this.getUnreadStorageKey());
+      if (raw) {
+        const obj = JSON.parse(raw);
+        return new Map(Object.entries(obj));
+      }
+    } catch (err) {
+      console.warn('从本地存储恢复未读计数失败:', err);
+    }
+    return new Map();
+  }
+
+  saveUnreadToStorage() {
+    try {
+      const obj = Object.fromEntries(this.unreadCounts);
+      localStorage.setItem(this.getUnreadStorageKey(), JSON.stringify(obj));
+    } catch (err) {
+      console.warn('持久化未读计数到本地失败:', err);
+    }
+  }
+
+  loadContactsFromStorage() {
+    try {
+      const raw = localStorage.getItem(this.getContactsStorageKey());
+      if (raw) {
+        const list = JSON.parse(raw);
+        const map = new Map();
+        list.forEach(c => map.set(c.userId, { ...c, isOnline: false }));
+        return map;
+      }
+    } catch (err) {
+      console.warn('从本地存储恢复联系人失败:', err);
+    }
+    return new Map();
+  }
+
+  saveContactsToStorage() {
+    try {
+      const list = Array.from(this.contacts.values());
+      localStorage.setItem(this.getContactsStorageKey(), JSON.stringify(list));
+    } catch (err) {
+      console.warn('持久化联系人失败:', err);
+    }
+  }
+
+  recordContact(userId, username, isOnline = false) {
+    if (!userId || userId === this.user.userId) return;
+    const existing = this.contacts.get(userId) || {};
+    this.contacts.set(userId, {
+      userId,
+      username: username || existing.username || '匿名用户',
+      isOnline: isOnline !== undefined ? isOnline : (existing.isOnline || false),
+      lastActive: Date.now()
+    });
+    this.saveContactsToStorage();
+  }
+
+  syncOnlineUsers(onlineUsersList) {
+    this.onlineUsers = onlineUsersList || [];
+
+    const onlineSet = new Set(this.onlineUsers.map(u => u.userId));
+
+    // 更新已有联系人的在线状态
+    for (const [userId, contact] of this.contacts.entries()) {
+      contact.isOnline = onlineSet.has(userId);
+    }
+
+    // 将新上线的用户记录入联系人表
+    this.onlineUsers.forEach(u => {
+      if (u.userId !== this.user.userId) {
+        this.recordContact(u.userId, u.username, true);
+      }
+    });
+
+    this.saveContactsToStorage();
+  }
+
+  getContactsList() {
+    return Array.from(this.contacts.values()).sort((a, b) => {
+      // 在线排在前面，其次按昵称
+      if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
+      return (a.username || '').localeCompare(b.username || '');
+    });
   }
 
   incrementUnread(scopeKey) {
     const current = this.unreadCounts.get(scopeKey) || 0;
     this.unreadCounts.set(scopeKey, current + 1);
+    this.saveUnreadToStorage();
     return current + 1;
   }
 
   clearUnread(scopeKey) {
-    this.unreadCounts.delete(scopeKey);
+    if (this.unreadCounts.has(scopeKey)) {
+      this.unreadCounts.delete(scopeKey);
+      this.saveUnreadToStorage();
+    }
   }
 
   getUnread(scopeKey) {
