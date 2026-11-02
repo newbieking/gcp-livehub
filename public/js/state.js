@@ -85,7 +85,23 @@ class AppState {
     if (!this.messageVault.has(scopeKey)) {
       this.messageVault.set(scopeKey, []);
     }
-    this.messageVault.get(scopeKey).push(message);
+    const list = this.messageVault.get(scopeKey);
+    // 避免重复追加
+    if (!list.some(m => m.id === message.id)) {
+      list.push(message);
+    }
+  }
+
+  setHistory(scopeKey, messages) {
+    const existing = this.messageVault.get(scopeKey) || [];
+    const map = new Map();
+    // 载入持久化历史
+    (messages || []).forEach(m => map.set(m.id, m));
+    // 合并当前即时消息
+    existing.forEach(m => map.set(m.id, m));
+
+    const merged = Array.from(map.values()).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    this.messageVault.set(scopeKey, merged);
   }
 
   getActiveMessages() {

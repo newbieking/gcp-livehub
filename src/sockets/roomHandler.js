@@ -1,11 +1,12 @@
 import { sessionStore } from '../services/sessionStore.js';
+import { messageStore } from '../services/messageStore.js';
 
 /**
  * 公共房间/频道业务处理器 (Room Broadcast Handler)
  */
 export function registerRoomHandlers(io, socket) {
   // 加入/切换至指定公共房间
-  socket.on('room:join', ({ room }) => {
+  socket.on('room:join', async ({ room }) => {
     const session = sessionStore.getSession(socket.id);
     if (!session) return;
 
@@ -21,6 +22,13 @@ export function registerRoomHandlers(io, socket) {
       room: targetRoom
     });
 
+    // 自动推送该房间的持久化历史记录
+    const history = await messageStore.getRoomHistory(targetRoom, 50);
+    socket.emit('room:history_response', {
+      room: targetRoom,
+      messages: history
+    });
+
     if (prevRoom !== targetRoom) {
       // 广播新房间在线成员
       io.to(targetRoom).emit('room:users_updated', {
@@ -30,8 +38,17 @@ export function registerRoomHandlers(io, socket) {
     }
   });
 
-  // 房间公开发言
-  socket.on('room:message', (data) => {
+  // 请求特定房间的历史记录（支持游标翻页）
+  socket.on('room:load_history', async ({ room, beforeTime, limit }) => {
+    const history = await messageStore.getRoomHistory(room, limit || 50, beforeTime);
+    socket.emit('room:history_response', {
+      room,
+      messages: history
+    });
+  });
+
+  // 房间公开发言并持久化
+  socket.on('room:message', async (data) => {
     const session = sessionStore.getSession(socket.id);
     if (!session) return;
 
@@ -46,9 +63,13 @@ export function registerRoomHandlers(io, socket) {
       senderId: session.userId,
       senderName: session.username,
       text: cleanText,
-      time: new Date().toLocaleTimeString()
+      time: new Date().toLocaleTimeString(),
+      createdAt: Date.now()
     };
 
-    io.to(targetRoom).emit('room:new_message', messagePayload);
+    // 持久化存储
+    const saved = await messageStore.saveMessage(messagePayload);
+
+    io.to(targetRoom).emit('room:new_message', saved);
   });
 }

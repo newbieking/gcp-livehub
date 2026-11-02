@@ -72,6 +72,9 @@ function switchToDM(user) {
   // 清除房间高亮，高亮当前私聊联系人并刷新气泡
   document.querySelectorAll('#roomList li').forEach(li => li.classList.remove('active'));
   renderOnlineUsers(switchToDM);
+
+  // 从服务端拉取该私聊的持久化历史记录
+  socket.emit('dm:load_history', { toUserId: user.userId });
 }
 
 // 绑定公共房间点击
@@ -189,6 +192,22 @@ socket.on('dm:new_message', (msg) => {
 socket.on('dm:user_typing', ({ fromUserId, isTyping }) => {
   state.dmTypingStatus.set(fromUserId, isTyping);
   renderTypingIndicator();
+});
+
+// 收到房间历史记录回执
+socket.on('room:history_response', ({ room, messages }) => {
+  state.setHistory(`room:${room}`, messages);
+  if (state.activeConversation.type === 'room' && state.activeConversation.targetId === room) {
+    renderMessages();
+  }
+});
+
+// 收到 1v1 私聊历史记录回执
+socket.on('dm:history_response', ({ toUserId, messages }) => {
+  state.setHistory(`dm:${toUserId}`, messages);
+  if (state.activeConversation.type === 'dm' && state.activeConversation.targetId === toUserId) {
+    renderMessages();
+  }
 });
 
 // 收到房间系统通知
