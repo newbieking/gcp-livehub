@@ -5,18 +5,18 @@ import { STORAGE_KEYS, DEFAULT_ROOM } from './config.js';
  */
 class AppState {
   constructor() {
-    // 生成或恢复唯一用户 ID
-    let savedUserId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+    // 优先从 sessionStorage 恢复独立标签页身份（确保同浏览器多标签页测试时自动生成独立用户），回退至 localStorage
+    let savedUserId = sessionStorage.getItem(STORAGE_KEYS.USER_ID);
     if (!savedUserId) {
       savedUserId = 'u_' + Math.random().toString(36).substring(2, 9);
-      localStorage.setItem(STORAGE_KEYS.USER_ID, savedUserId);
+      sessionStorage.setItem(STORAGE_KEYS.USER_ID, savedUserId);
     }
 
     // 生成或恢复昵称
-    let savedUsername = localStorage.getItem(STORAGE_KEYS.USERNAME);
+    let savedUsername = sessionStorage.getItem(STORAGE_KEYS.USERNAME);
     if (!savedUsername) {
       savedUsername = `极客_${Math.floor(100 + Math.random() * 900)}`;
-      localStorage.setItem(STORAGE_KEYS.USERNAME, savedUsername);
+      sessionStorage.setItem(STORAGE_KEYS.USERNAME, savedUsername);
     }
 
     this.user = {
@@ -196,6 +196,7 @@ class AppState {
 
   setUsername(name) {
     this.user.username = name;
+    sessionStorage.setItem(STORAGE_KEYS.USERNAME, name);
     localStorage.setItem(STORAGE_KEYS.USERNAME, name);
   }
 

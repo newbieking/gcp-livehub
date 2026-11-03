@@ -1,6 +1,6 @@
 /**
  * 多人协作白板核心引擎 (Multiplayer Collaborative Whiteboard Engine)
- * 双层 Canvas 架构 + 高帧率实时流式绘制 + 多人协同光标
+ * 双层 Canvas 架构 + 高帧率实时流式绘制 + 多人协同光标与在线感知
  */
 
 export class WhiteboardController {
@@ -56,8 +56,7 @@ export class WhiteboardController {
     this.lastCursorEmitTime = 0;
     this.lastStreamEmitTime = 0;
 
-    // 初始化
-    this.initCanvasSize();
+    // 初始化事件绑定
     this.bindToolbarEvents();
     this.bindCanvasEvents();
     this.bindMiniChatEvents();
@@ -71,10 +70,12 @@ export class WhiteboardController {
    */
   initCanvasSize() {
     const rect = this.container.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
     const dpr = window.devicePixelRatio || 1;
     this.dpr = dpr;
-    this.width = rect.width || 800;
-    this.height = rect.height || 600;
+    this.width = rect.width;
+    this.height = rect.height;
 
     // 设置物理像素
     this.baseCanvas.width = this.width * dpr;
@@ -92,12 +93,13 @@ export class WhiteboardController {
     this.baseCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.overlayCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // 重绘所有图元
+    // 重绘所有已成型图元
     this.redrawBaseCanvas();
   }
 
   handleResize() {
     const rect = this.container.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
     if (rect.width === this.width && rect.height === this.height) return;
     this.initCanvasSize();
   }
@@ -107,9 +109,40 @@ export class WhiteboardController {
    */
   activate(roomName = '多人协同白板') {
     this.activeRoom = roomName;
-    setTimeout(() => this.initCanvasSize(), 50);
-    // 加入服务端白板房间
+    // 渲染帧确保容器 display 变更已生效
+    requestAnimationFrame(() => {
+      this.initCanvasSize();
+      setTimeout(() => this.initCanvasSize(), 60);
+    });
+    // 加入服务端白板通道
     this.socket.emit('wb:join', { room: this.activeRoom });
+  }
+
+  /**
+   * 离开白板视口
+   */
+  deactivate() {
+    this.socket.emit('wb:leave', { room: this.activeRoom });
+    this.remoteCursors.forEach(c => c.el.remove());
+    this.remoteCursors.clear();
+    this.peerStreams.clear();
+    this.clearOverlay();
+  }
+
+  /**
+   * 更新协同者在线状态看板
+   */
+  updateCollaboratorsUI(collaborators = []) {
+    if (!this.collaboratorsCountTag) return;
+    const count = collaborators.length;
+    if (count <= 1) {
+      this.collaboratorsCountTag.textContent = '⚡ 协作准备就绪 (1人)';
+      this.collaboratorsCountTag.style.color = '#38bdf8';
+    } else {
+      const names = collaborators.map(u => u.username).join(', ');
+      this.collaboratorsCountTag.textContent = `⚡ 正在协作 (${count}人: ${names})`;
+      this.collaboratorsCountTag.style.color = '#10b981';
+    }
   }
 
   /**
@@ -197,7 +230,7 @@ export class WhiteboardController {
       const { x, y } = getCoord(e);
       this.startX = x;
       this.startY = y;
-      const currentUid = this.state.user ? this.state.user.userId : (this.state.currentUser?.userId || 'u_guest');
+      const currentUid = this.state.user ? this.state.user.userId : 'u_guest';
       this.activeElementId = `${currentUid}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       this.currentPoints = [{ x, y }];
 
@@ -226,7 +259,7 @@ export class WhiteboardController {
       this.currentPoints.push({ x, y });
       this.drawLocalPreview(x, y);
 
-      // 30ms 节流向服务端广播实时笔画流预览
+      // 30ms 节流向服务端广播实时笔画流预览（传输当前完整笔画点序列，杜绝折叠错乱）
       if (now - this.lastStreamEmitTime > 30) {
         this.lastStreamEmitTime = now;
         this.socket.emit('wb:draw_stream', {
@@ -235,11 +268,15 @@ export class WhiteboardController {
           type: this.currentTool,
           color: this.currentColor,
           strokeWidth: this.strokeWidth,
-          partialPoints: this.currentPoints.slice(-5),
+          points: this.currentPoints,
           x: Math.min(this.startX, x),
           y: Math.min(this.startY, y),
           width: Math.abs(x - this.startX),
-          height: Math.abs(y - this.startY)
+          height: Math.abs(y - this.startY),
+          startX: this.startX,
+          startY: this.startY,
+          endX: x,
+          endY: y
         });
       }
     };
@@ -354,7 +391,7 @@ export class WhiteboardController {
    * 重绘底层静态 Canvas (包含所有已确认图元)
    */
   redrawBaseCanvas() {
-    this.baseCtx.clearRect(0, 0, this.width, this.height);
+    this.baseCtx.clearRect(0, 0, this.width || 800, this.height || 600);
     for (const el of this.elements) {
       if (!el.isDeleted) {
         this.renderSingleElement(this.baseCtx, el);
@@ -425,6 +462,7 @@ export class WhiteboardController {
    * 贝塞尔二次曲线平滑渲染连续点序列
    */
   renderPoints(ctx, points) {
+    if (!points || points.length === 0) return;
     if (points.length === 1) {
       ctx.beginPath();
       ctx.arc(points[0].x, points[0].y, ctx.lineWidth / 2, 0, Math.PI * 2);
@@ -450,7 +488,7 @@ export class WhiteboardController {
    * 绘制带箭头的矢量线段
    */
   renderArrow(ctx, fromX, fromY, toX, toY, width) {
-    const headLength = Math.max(12, width * 3.5);
+    const headLength = Math.max(12, (width || 4) * 3.5);
     const angle = Math.atan2(toY - fromY, toX - fromX);
 
     ctx.beginPath();
@@ -475,7 +513,7 @@ export class WhiteboardController {
   }
 
   clearOverlay() {
-    this.overlayCtx.clearRect(0, 0, this.width, this.height);
+    this.overlayCtx.clearRect(0, 0, this.width || 800, this.height || 600);
   }
 
   redrawPeerStreams() {
@@ -490,6 +528,25 @@ export class WhiteboardController {
         this.renderPoints(this.overlayCtx, stream.points);
       } else if (stream.type === 'rect') {
         this.overlayCtx.strokeRect(stream.x, stream.y, stream.width, stream.height);
+      } else if (stream.type === 'circle') {
+        const radiusX = (stream.width || 0) / 2;
+        const radiusY = (stream.height || 0) / 2;
+        const centerX = (stream.x || 0) + radiusX;
+        const centerY = (stream.y || 0) + radiusY;
+        this.overlayCtx.beginPath();
+        this.overlayCtx.ellipse(centerX, centerY, Math.max(1, radiusX), Math.max(1, radiusY), 0, 0, Math.PI * 2);
+        this.overlayCtx.stroke();
+      } else if (stream.type === 'line') {
+        this.overlayCtx.beginPath();
+        this.overlayCtx.moveTo(stream.startX ?? stream.x, stream.startY ?? stream.y);
+        this.overlayCtx.lineTo(stream.endX ?? (stream.x + stream.width), stream.endY ?? (stream.y + stream.height));
+        this.overlayCtx.stroke();
+      } else if (stream.type === 'arrow') {
+        const sX = stream.startX ?? stream.x;
+        const sY = stream.startY ?? stream.y;
+        const eX = stream.endX ?? (stream.x + stream.width);
+        const eY = stream.endY ?? (stream.y + stream.height);
+        this.renderArrow(this.overlayCtx, sX, sY, eX, eY, stream.strokeWidth);
       }
       this.overlayCtx.restore();
     }
@@ -500,12 +557,22 @@ export class WhiteboardController {
    */
   bindSocketEvents() {
     // 1. 白板初始全量快照加载
-    this.socket.on('wb:init_state', ({ elements }) => {
+    this.socket.on('wb:init_state', ({ elements, collaborators }) => {
       this.elements = Array.isArray(elements) ? elements : [];
       this.redrawBaseCanvas();
+      if (Array.isArray(collaborators)) {
+        this.updateCollaboratorsUI(collaborators);
+      }
     });
 
-    // 2. 协作者创建了新图元
+    // 2. 在线白板协作者更新
+    this.socket.on('wb:collaborators_updated', ({ collaborators }) => {
+      if (Array.isArray(collaborators)) {
+        this.updateCollaboratorsUI(collaborators);
+      }
+    });
+
+    // 3. 协作者创建了新图元
     this.socket.on('wb:element_created', ({ element }) => {
       if (!this.elements.some(e => e.id === element.id)) {
         this.elements.push(element);
@@ -519,7 +586,7 @@ export class WhiteboardController {
       }
     });
 
-    // 3. 协作者撤销了图元
+    // 4. 协作者撤销了图元
     this.socket.on('wb:element_undone', ({ elementId }) => {
       const target = this.elements.find(e => e.id === elementId);
       if (target) {
@@ -528,7 +595,7 @@ export class WhiteboardController {
       }
     });
 
-    // 4. 白板全量清空
+    // 5. 白板全量清空
     this.socket.on('wb:cleared', () => {
       this.elements = [];
       this.peerStreams.clear();
@@ -536,35 +603,36 @@ export class WhiteboardController {
       this.redrawBaseCanvas();
     });
 
-    // 5. 远程协作者实时流预览
+    // 6. 远程协作者实时流预览 (全量点序列平滑对接)
     this.socket.on('wb:peer_draw_stream', (data) => {
-      if (!this.peerStreams.has(data.userId)) {
-        this.peerStreams.set(data.userId, {
-          type: data.type,
-          color: data.color,
-          strokeWidth: data.strokeWidth,
-          points: []
-        });
-      }
-      const stream = this.peerStreams.get(data.userId);
-      if (data.partialPoints) {
-        stream.points.push(...data.partialPoints);
-      }
-      stream.x = data.x;
-      stream.y = data.y;
-      stream.width = data.width;
-      stream.height = data.height;
+      if (data.userId === this.state.user.userId) return;
+
+      this.peerStreams.set(data.userId, {
+        type: data.type,
+        color: data.color,
+        strokeWidth: data.strokeWidth,
+        points: data.points || [],
+        x: data.x,
+        y: data.y,
+        width: data.width,
+        height: data.height,
+        startX: data.startX,
+        startY: data.startY,
+        endX: data.endX,
+        endY: data.endY
+      });
 
       this.clearOverlay();
       this.redrawPeerStreams();
     });
 
-    // 6. 远程协同光标追踪
+    // 7. 远程协同光标追踪 (过滤自身光标)
     this.socket.on('wb:user_cursor', ({ userId, username, x, y }) => {
+      if (userId === this.state.user.userId) return;
       this.renderRemoteCursor(userId, username, x, y);
     });
 
-    // 7. 远程协同光标离场
+    // 8. 远程协同光标离场
     this.socket.on('wb:user_cursor_leave', ({ userId }) => {
       this.removeRemoteCursor(userId);
     });
@@ -628,13 +696,13 @@ export class WhiteboardController {
    */
   exportAsPNG() {
     const offscreen = document.createElement('canvas');
-    offscreen.width = this.width;
-    offscreen.height = this.height;
+    offscreen.width = this.width || 800;
+    offscreen.height = this.height || 600;
     const offCtx = offscreen.getContext('2d');
 
     // 填充科技暗黑底色
     offCtx.fillStyle = '#0b1120';
-    offCtx.fillRect(0, 0, this.width, this.height);
+    offCtx.fillRect(0, 0, offscreen.width, offscreen.height);
 
     // 绘制所有成型图元
     for (const el of this.elements) {
@@ -680,7 +748,7 @@ export class WhiteboardController {
   }
 
   appendMiniChatMessage(msg) {
-    const myId = this.state.user ? this.state.user.userId : this.state.currentUser?.userId;
+    const myId = this.state.user ? this.state.user.userId : 'u_guest';
     const isSelf = msg.fromUserId === myId;
     const msgDiv = document.createElement('div');
     msgDiv.className = `wb-mini-msg ${isSelf ? 'self' : 'other'}`;

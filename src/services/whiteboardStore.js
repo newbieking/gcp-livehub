@@ -8,6 +8,70 @@ export class WhiteboardStore {
   constructor() {
     // 房间白板内存缓存: roomId -> { roomId, elements: [], elementsMap: Map, version: number, dirty: boolean, timer: null, loaded: boolean }
     this.rooms = new Map();
+    // 白板在线协作者缓存: roomId -> Map<socketId, { socketId, userId, username, joinedAt }>
+    this.collaborators = new Map();
+  }
+
+  /**
+   * 注册白板协作者
+   */
+  addCollaborator(roomId, socketId, { userId, username }) {
+    if (!this.collaborators.has(roomId)) {
+      this.collaborators.set(roomId, new Map());
+    }
+    this.collaborators.get(roomId).set(socketId, {
+      socketId,
+      userId,
+      username: username || '协作者',
+      joinedAt: Date.now()
+    });
+    return this.getCollaborators(roomId);
+  }
+
+  /**
+   * 移除白板协作者 (支持按 roomId + socketId)
+   */
+  removeCollaborator(roomId, socketId) {
+    if (this.collaborators.has(roomId)) {
+      this.collaborators.get(roomId).delete(socketId);
+    }
+    return this.getCollaborators(roomId);
+  }
+
+  /**
+   * 依据 socketId 从所有白板房间中注销（用于断开连接或下线）
+   * @returns {Array<{ roomId, remaining: Array }>} 受影响的房间及其最新名单
+   */
+  removeSocketFromAllRooms(socketId) {
+    const affected = [];
+    for (const [roomId, collabs] of this.collaborators.entries()) {
+      if (collabs.has(socketId)) {
+        collabs.delete(socketId);
+        affected.push({
+          roomId,
+          remaining: this.getCollaborators(roomId)
+        });
+      }
+    }
+    return affected;
+  }
+
+  /**
+   * 获取白板房间当前所有唯一在线协作者清单
+   */
+  getCollaborators(roomId) {
+    if (!this.collaborators.has(roomId)) return [];
+    const collabs = this.collaborators.get(roomId);
+    const uniqueUsers = new Map();
+    for (const item of collabs.values()) {
+      if (!uniqueUsers.has(item.userId)) {
+        uniqueUsers.set(item.userId, {
+          userId: item.userId,
+          username: item.username
+        });
+      }
+    }
+    return Array.from(uniqueUsers.values());
   }
 
   /**
@@ -79,6 +143,10 @@ export class WhiteboardStore {
       y: element.y !== undefined ? Math.round(element.y) : undefined,
       width: element.width !== undefined ? Math.round(element.width) : undefined,
       height: element.height !== undefined ? Math.round(element.height) : undefined,
+      startX: element.startX !== undefined ? Math.round(element.startX) : undefined,
+      startY: element.startY !== undefined ? Math.round(element.startY) : undefined,
+      endX: element.endX !== undefined ? Math.round(element.endX) : undefined,
+      endY: element.endY !== undefined ? Math.round(element.endY) : undefined,
       text: element.text || '',
       zIndex: element.zIndex || roomState.elements.length + 1,
       createdAt: element.createdAt || Date.now(),

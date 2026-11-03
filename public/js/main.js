@@ -59,7 +59,10 @@ function switchToRoom(roomName) {
       whiteboard.activate(roomName);
     }
   } else {
-    if (whiteboardViewport) whiteboardViewport.classList.add('hidden');
+    if (whiteboardViewport && !whiteboardViewport.classList.contains('hidden')) {
+      whiteboard.deactivate();
+      whiteboardViewport.classList.add('hidden');
+    }
     if (chatContentArea) chatContentArea.classList.remove('hidden');
   }
 
@@ -93,7 +96,10 @@ function switchToDM(user) {
   // 离开白板视图切回私聊
   const chatContentArea = document.getElementById('chatContentArea');
   const whiteboardViewport = document.getElementById('whiteboardViewport');
-  if (whiteboardViewport) whiteboardViewport.classList.add('hidden');
+  if (whiteboardViewport && !whiteboardViewport.classList.contains('hidden')) {
+    whiteboard.deactivate();
+    whiteboardViewport.classList.add('hidden');
+  }
   if (chatContentArea) chatContentArea.classList.remove('hidden');
 
   updateHeader();

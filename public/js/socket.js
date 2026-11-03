@@ -22,6 +22,9 @@ export function createSocketConnection(onStatusChange, onLatencyUpdate, onTransp
     // 重新加入当前房间
     if (state.activeConversation.type === 'room') {
       socket.emit('room:join', { room: state.activeConversation.targetId });
+      if (state.activeConversation.targetId === '多人协同白板') {
+        socket.emit('wb:join', { room: '多人协同白板' });
+      }
     }
   });
 

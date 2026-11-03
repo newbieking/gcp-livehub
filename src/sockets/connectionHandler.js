@@ -1,5 +1,6 @@
 import { sessionStore } from '../services/sessionStore.js';
 import { messageStore } from '../services/messageStore.js';
+import { whiteboardStore } from '../services/whiteboardStore.js';
 
 /**
  * 连接生命周期与全局会话管理 (Connection Lifecycle Handler)
@@ -86,9 +87,16 @@ export function registerConnectionHandlers(io, socket) {
       users: sessionStore.getAllOnlineUsers()
     });
 
-    // 清理白板中该用户的协同光标
-    socket.broadcast.emit('wb:user_cursor_leave', {
-      userId: session.userId
-    });
+    // 清理白板中该用户的协同状态与在线名单
+    const affected = whiteboardStore.removeSocketFromAllRooms(socket.id);
+    for (const item of affected) {
+      io.to(`wb:${item.roomId}`).emit('wb:collaborators_updated', {
+        roomId: item.roomId,
+        collaborators: item.remaining
+      });
+      io.to(`wb:${item.roomId}`).emit('wb:user_cursor_leave', {
+        userId: session.userId
+      });
+    }
   });
 }
