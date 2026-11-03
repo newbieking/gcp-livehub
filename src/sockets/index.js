@@ -3,6 +3,7 @@ import { config } from '../config/index.js';
 import { registerConnectionHandlers } from './connectionHandler.js';
 import { registerRoomHandlers } from './roomHandler.js';
 import { registerDirectMessageHandlers } from './directMessageHandler.js';
+import { registerWhiteboardHandlers } from './whiteboardHandler.js';
 
 /**
  * Socket.IO 核心装配层
@@ -24,6 +25,9 @@ export function initSocketServer(httpServer) {
 
     // 注册点对点私聊与定向打字指示器
     registerDirectMessageHandlers(io, socket);
+
+    // 注册多人协同白板实时网关
+    registerWhiteboardHandlers(io, socket);
   });
 
   return io;

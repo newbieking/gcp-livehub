@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '../../../data');
 const DATA_FILE = path.join(DATA_DIR, 'messages.json');
 const READ_STATES_FILE = path.join(DATA_DIR, 'read_states.json');
+const WHITEBOARDS_FILE = path.join(DATA_DIR, 'whiteboards.json');
 
 /**
  * 本地文件存储驱动 (开发环境默认)
@@ -19,6 +20,7 @@ export class FileMessageStore extends BaseMessageStore {
     super('FileMessageStore');
     this.messages = [];
     this.readStates = new Map(); // `${userId}:${targetId}` -> { userId, targetId, lastReadTime, updatedAt }
+    this.whiteboards = new Map(); // `roomId` -> { elements, version, updatedAt }
     this.init();
   }
 
@@ -46,10 +48,30 @@ export class FileMessageStore extends BaseMessageStore {
       } else {
         this.flushReadStates();
       }
+
+      // 载入白板快照数据
+      if (fs.existsSync(WHITEBOARDS_FILE)) {
+        const rawWb = fs.readFileSync(WHITEBOARDS_FILE, 'utf-8');
+        const wbObj = JSON.parse(rawWb || '{}');
+        this.whiteboards = new Map(Object.entries(wbObj));
+        console.log(`[Storage/File] 已从本地文件加载白板房间 ${this.whiteboards.size} 个`);
+      } else {
+        this.flushWhiteboards();
+      }
     } catch (err) {
       console.error('[Storage/File] 读取数据文件失败:', err);
       this.messages = [];
       this.readStates = new Map();
+      this.whiteboards = new Map();
+    }
+  }
+
+  flushWhiteboards() {
+    try {
+      const obj = Object.fromEntries(this.whiteboards);
+      fs.writeFileSync(WHITEBOARDS_FILE, JSON.stringify(obj, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('[Storage/File] 写入白板快照失败:', err);
     }
   }
 
@@ -191,5 +213,23 @@ export class FileMessageStore extends BaseMessageStore {
     }
 
     return Array.from(partners.values()).sort((a, b) => b.lastActive - a.lastActive);
+  }
+
+  /**
+   * 拉取白板快照
+   * @param {string} roomId
+   */
+  async getWhiteboardSnapshot(roomId) {
+    return this.whiteboards.get(roomId) || null;
+  }
+
+  /**
+   * 保存白板快照
+   * @param {string} roomId
+   * @param {Object} snapshotData
+   */
+  async saveWhiteboardSnapshot(roomId, snapshotData) {
+    this.whiteboards.set(roomId, snapshotData);
+    this.flushWhiteboards();
   }
 }

@@ -85,5 +85,10 @@ export function registerConnectionHandlers(io, socket) {
     io.emit('users:online_updated', {
       users: sessionStore.getAllOnlineUsers()
     });
+
+    // 清理白板中该用户的协同光标
+    socket.broadcast.emit('wb:user_cursor_leave', {
+      userId: session.userId
+    });
   });
 }

@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { createSocketConnection } from './socket.js';
+import { WhiteboardController } from './whiteboard.js';
 import {
   dom,
   initUIBindings,
@@ -31,6 +32,9 @@ const socket = createSocketConnection(
   updateTransport
 );
 
+// 初始化多人协作白板控制器
+const whiteboard = new WhiteboardController(socket, state);
+
 // ----------------------------------------
 // 1. 聊天室/私聊会话切换逻辑
 // ----------------------------------------
@@ -43,6 +47,21 @@ function switchToRoom(roomName) {
   // 清除该频道的未读消息计数
   state.clearUnread(`room:${roomName}`);
   state.setActiveConversation('room', roomName, roomName);
+
+  // 白板视图与常规聊天视图切换调度
+  const chatContentArea = document.getElementById('chatContentArea');
+  const whiteboardViewport = document.getElementById('whiteboardViewport');
+
+  if (roomName === '多人协同白板') {
+    if (chatContentArea) chatContentArea.classList.add('hidden');
+    if (whiteboardViewport) {
+      whiteboardViewport.classList.remove('hidden');
+      whiteboard.activate(roomName);
+    }
+  } else {
+    if (whiteboardViewport) whiteboardViewport.classList.add('hidden');
+    if (chatContentArea) chatContentArea.classList.remove('hidden');
+  }
 
   updateHeader();
   renderMessages();
@@ -70,6 +89,12 @@ function switchToDM(user) {
   // 清除该用户的私聊未读消息计数
   state.clearUnread(`dm:${user.userId}`);
   state.setActiveConversation('dm', user.userId, user.username);
+
+  // 离开白板视图切回私聊
+  const chatContentArea = document.getElementById('chatContentArea');
+  const whiteboardViewport = document.getElementById('whiteboardViewport');
+  if (whiteboardViewport) whiteboardViewport.classList.add('hidden');
+  if (chatContentArea) chatContentArea.classList.remove('hidden');
 
   updateHeader();
   renderMessages();
@@ -172,6 +197,11 @@ socket.on('room:new_message', (msg) => {
   const roomKey = `room:${msg.room}`;
   state.addMessage(roomKey, msg);
 
+  // 同步推送至白板迷你聊天抽屉
+  if (msg.room === '多人协同白板') {
+    whiteboard.appendMiniChatMessage(msg);
+  }
+
   if (state.activeConversation.type === 'room' && state.activeConversation.targetId === msg.room) {
     appendMessageElement(msg);
     // 处于当前窗口，直接向服务端上报已读水位线
@@ -247,6 +277,11 @@ socket.on('room:history_response', ({ room, messages }) => {
   state.setHistory(`room:${room}`, messages);
   if (state.activeConversation.type === 'room' && state.activeConversation.targetId === room) {
     renderMessages();
+  }
+  // 同步初始化白板迷你讨论抽屉历史
+  if (room === '多人协同白板' && Array.isArray(messages)) {
+    whiteboard.miniChatMessages.innerHTML = '';
+    messages.forEach(m => whiteboard.appendMiniChatMessage(m));
   }
 });
 

@@ -78,51 +78,163 @@
       </div>
     </aside>
 
-    <!-- 主聊天工作区 -->
+    <!-- 主工作区 (聊天与白板动态切换) -->
     <main class="chat-viewport">
-      <!-- 视口顶栏 -->
-      <header class="chat-header">
-        <div class="room-info">
-          <div class="header-title-row">
-            <span class="chat-mode-badge" id="chatModeBadge">公共频道</span>
-            <h1 id="chatTitle">💬 大厅讨论区</h1>
+      <!-- 聊天视图区 -->
+      <div class="chat-content-area" id="chatContentArea">
+        <!-- 视口顶栏 -->
+        <header class="chat-header">
+          <div class="room-info">
+            <div class="header-title-row">
+              <span class="chat-mode-badge" id="chatModeBadge">公共频道</span>
+              <h1 id="chatTitle">💬 大厅讨论区</h1>
+            </div>
+            <p id="chatSubtitle">已连接至云端实时长连接通道</p>
           </div>
-          <p id="chatSubtitle">已连接至云端实时长连接通道</p>
-        </div>
-        <div class="header-tools">
-          <span class="transport-tag" id="transportTag">Transport: --</span>
-        </div>
-      </header>
+          <div class="header-tools">
+            <span class="transport-tag" id="transportTag">Transport: --</span>
+          </div>
+        </header>
 
-      <!-- 消息流动展示区域 -->
-      <section class="messages-container" id="messagesContainer">
-        <!-- 动态消息流 -->
-      </section>
+        <!-- 消息流动展示区域 -->
+        <section class="messages-container" id="messagesContainer">
+          <!-- 动态消息流 -->
+        </section>
 
-      <!-- 实时输入指示器 (特别在 1v1 私聊中定向展示) -->
-      <div class="typing-indicator-bar" id="typingIndicatorBar">
-        <span class="typing-text" id="typingText"></span>
+        <!-- 实时输入指示器 (特别在 1v1 私聊中定向展示) -->
+        <div class="typing-indicator-bar" id="typingIndicatorBar">
+          <span class="typing-text" id="typingText"></span>
+        </div>
+
+        <!-- 底部发送栏 -->
+        <footer class="chat-input-bar">
+          <form id="messageForm" class="message-form">
+            <input 
+              type="text" 
+              id="messageInput" 
+              placeholder="输入消息，按 Enter 发送..." 
+              autocomplete="off" 
+              maxlength="1000"
+            >
+            <button type="submit" id="sendBtn">
+              <span>发送</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </form>
+        </footer>
       </div>
 
-      <!-- 底部发送栏 -->
-      <footer class="chat-input-bar">
-        <form id="messageForm" class="message-form">
-          <input 
-            type="text" 
-            id="messageInput" 
-            placeholder="输入消息，按 Enter 发送..." 
-            autocomplete="off" 
-            maxlength="1000"
-          >
-          <button type="submit" id="sendBtn">
-            <span>发送</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
-        </form>
-      </footer>
+      <!-- 多人协作白板视图区 -->
+      <section class="whiteboard-viewport hidden" id="whiteboardViewport">
+        <!-- 白板控制顶栏 -->
+        <header class="wb-toolbar">
+          <!-- 绘图工具组 -->
+          <div class="wb-tool-group" id="wbToolGroup">
+            <button class="wb-tool-btn active" data-tool="pencil" title="自由画笔 (Pencil)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              <span>画笔</span>
+            </button>
+            <button class="wb-tool-btn" data-tool="rect" title="矩形 (Rectangle)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+              <span>矩形</span>
+            </button>
+            <button class="wb-tool-btn" data-tool="circle" title="圆形 (Circle)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>
+              <span>圆形</span>
+            </button>
+            <button class="wb-tool-btn" data-tool="line" title="直线 (Line)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"></line></svg>
+              <span>直线</span>
+            </button>
+            <button class="wb-tool-btn" data-tool="arrow" title="箭头 (Arrow)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"></line><polyline points="10 5 19 5 19 14"></polyline></svg>
+              <span>箭头</span>
+            </button>
+            <button class="wb-tool-btn" data-tool="eraser" title="橡皮擦 (Eraser)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"></path><path d="M22 21H7"></path><path d="m5 11 9 9"></path></svg>
+              <span>橡皮</span>
+            </button>
+          </div>
+
+          <div class="wb-divider"></div>
+
+          <!-- 调色板与取色器 -->
+          <div class="wb-color-group">
+            <div class="wb-color-presets" id="wbColorPresets">
+              <span class="wb-color-dot active" data-color="#38bdf8" style="background:#38bdf8;" title="科技青"></span>
+              <span class="wb-color-dot" data-color="#ef4444" style="background:#ef4444;" title="珊瑚红"></span>
+              <span class="wb-color-dot" data-color="#10b981" style="background:#10b981;" title="翠绿"></span>
+              <span class="wb-color-dot" data-color="#f59e0b" style="background:#f59e0b;" title="明黄"></span>
+              <span class="wb-color-dot" data-color="#a855f7" style="background:#a855f7;" title="极光紫"></span>
+              <span class="wb-color-dot" data-color="#f8fafc" style="background:#f8fafc;" title="纯白"></span>
+              <span class="wb-color-dot" data-color="#0f172a" style="background:#0f172a; border: 1px solid #475569;" title="暗夜底色"></span>
+            </div>
+            <input type="color" id="wbCustomColor" class="wb-custom-color" value="#38bdf8" title="自定义调色">
+          </div>
+
+          <div class="wb-divider"></div>
+
+          <!-- 线条粗细 -->
+          <div class="wb-width-group" id="wbWidthGroup">
+            <button class="wb-size-btn" data-size="2" title="细 (2px)">2</button>
+            <button class="wb-size-btn active" data-size="4" title="中 (4px)">4</button>
+            <button class="wb-size-btn" data-size="8" title="粗 (8px)">8</button>
+            <button class="wb-size-btn" data-size="16" title="特粗 (16px)">16</button>
+          </div>
+
+          <div class="wb-divider"></div>
+
+          <!-- 动作控制组 -->
+          <div class="wb-action-group">
+            <button id="wbUndoBtn" class="wb-action-btn" title="撤销最后一笔 (Ctrl+Z)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>
+              <span>撤销</span>
+            </button>
+            <button id="wbClearBtn" class="wb-action-btn btn-danger-soft" title="清空白板">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              <span>清空</span>
+            </button>
+            <button id="wbExportBtn" class="wb-action-btn" title="导出为 PNG 图片">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>导出</span>
+            </button>
+          </div>
+
+          <!-- 右侧状态：在线协作与微型聊天抽屉切换 -->
+          <div class="wb-status-group">
+            <span class="wb-online-tag" id="wbCollaboratorsCount">⚡ 多人协同就绪</span>
+            <button id="wbToggleMiniChatBtn" class="wb-action-btn btn-accent-soft" title="展开/收起边画边聊抽屉">
+              💬 边画边聊
+            </button>
+          </div>
+        </header>
+
+        <!-- 双层 Canvas 绘图主视口 -->
+        <div class="wb-canvas-container" id="wbCanvasContainer">
+          <!-- 底层：渲染持久化要素 -->
+          <canvas id="wbBaseCanvas"></canvas>
+          <!-- 顶层：处理高帧率交互与流式预览 -->
+          <canvas id="wbOverlayCanvas"></canvas>
+          <!-- 远程多人光标与名字挂牌图层 -->
+          <div class="wb-cursors-layer" id="wbCursorsLayer"></div>
+        </div>
+
+        <!-- 浮动微型聊天抽屉 (边画边聊) -->
+        <div class="wb-mini-chat-drawer hidden" id="wbMiniChatDrawer">
+          <div class="wb-mini-chat-header">
+            <span>💬 白板实时讨论</span>
+            <button id="wbCloseMiniChatBtn" class="close-btn" title="收起">&times;</button>
+          </div>
+          <div class="wb-mini-chat-messages" id="wbMiniChatMessages"></div>
+          <form class="wb-mini-chat-input-row" id="wbMiniChatForm">
+            <input type="text" id="wbMiniChatInput" placeholder="输入消息..." maxlength="200" autocomplete="off">
+            <button type="submit">发送</button>
+          </form>
+        </div>
+      </section>
     </main>
   </div>
 

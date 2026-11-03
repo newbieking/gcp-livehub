@@ -9,9 +9,11 @@ export class FirestoreMessageStore extends BaseMessageStore {
     super('FirestoreMessageStore');
     this.collectionName = options.collection || 'messages';
     this.readStatesColName = 'read_states';
+    this.whiteboardsColName = 'whiteboards';
     this.db = null;
     this.fallbackStore = [];
     this.fallbackReadStates = new Map();
+    this.fallbackWhiteboards = new Map();
     this.init();
   }
 
@@ -156,5 +158,30 @@ export class FirestoreMessageStore extends BaseMessageStore {
       }
     }
     return Array.from(partners.values());
+  }
+
+  async getWhiteboardSnapshot(roomId) {
+    if (this.db) {
+      try {
+        const doc = await this.db.collection(this.whiteboardsColName).doc(roomId).get();
+        return doc.exists ? doc.data() : null;
+      } catch (err) {
+        console.error('[Storage/Firestore] 读取白板快照失败:', err);
+        return null;
+      }
+    }
+    return this.fallbackWhiteboards.get(roomId) || null;
+  }
+
+  async saveWhiteboardSnapshot(roomId, snapshotData) {
+    if (this.db) {
+      try {
+        await this.db.collection(this.whiteboardsColName).doc(roomId).set(snapshotData);
+        return;
+      } catch (err) {
+        console.error('[Storage/Firestore] 保存白板快照失败:', err);
+      }
+    }
+    this.fallbackWhiteboards.set(roomId, snapshotData);
   }
 }

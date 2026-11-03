@@ -73,4 +73,23 @@ export class BaseMessageStore {
   async getRecentConversations(userId) {
     throw new Error(`[${this.driverName}] getRecentConversations 方法未实现`);
   }
+
+  /**
+   * 拉取指定房间的白板快照
+   * @param {string} roomId
+   * @returns {Promise<Object|null>}
+   */
+  async getWhiteboardSnapshot(roomId) {
+    throw new Error(`[${this.driverName}] getWhiteboardSnapshot 方法未实现`);
+  }
+
+  /**
+   * 保存指定房间的白板快照
+   * @param {string} roomId
+   * @param {Object} snapshotData
+   * @returns {Promise<void>}
+   */
+  async saveWhiteboardSnapshot(roomId, snapshotData) {
+    throw new Error(`[${this.driverName}] saveWhiteboardSnapshot 方法未实现`);
+  }
 }

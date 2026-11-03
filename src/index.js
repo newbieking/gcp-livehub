@@ -2,6 +2,7 @@ import http from 'http';
 import { config, printConfigSummary } from './config/index.js';
 import { createApp } from './app.js';
 import { initSocketServer } from './sockets/index.js';
+import { whiteboardStore } from './services/whiteboardStore.js';
 
 let ioInstance = null;
 
@@ -26,8 +27,14 @@ server.listen(config.port, '0.0.0.0', () => {
 });
 
 // 优雅停机信号处理（便于 Cloud Run 缩容平滑过渡）
-const handleShutdown = (signal) => {
+const handleShutdown = async (signal) => {
   console.log(`\n接收到 ${signal} 信号，准备平滑关闭服务...`);
+  try {
+    await whiteboardStore.flushAll();
+    console.log('[WhiteboardStore] 所有白板脏数据已完成最终落盘');
+  } catch (e) {
+    console.error('[WhiteboardStore] 最终落盘异常:', e);
+  }
   if (ioInstance) {
     ioInstance.close(() => {
       console.log('Socket.IO 服务已关闭所有连接');

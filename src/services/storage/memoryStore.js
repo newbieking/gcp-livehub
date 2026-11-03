@@ -8,6 +8,7 @@ export class MemoryMessageStore extends BaseMessageStore {
     super('MemoryMessageStore');
     this.messages = [];
     this.readStates = new Map();
+    this.whiteboards = new Map();
     console.log('[Storage/Memory] 已启用纯内存驱动 (不落盘，重启自动重置)');
   }
 
@@ -115,5 +116,13 @@ export class MemoryMessageStore extends BaseMessageStore {
     }
 
     return Array.from(partners.values()).sort((a, b) => b.lastActive - a.lastActive);
+  }
+
+  async getWhiteboardSnapshot(roomId) {
+    return this.whiteboards.get(roomId) || null;
+  }
+
+  async saveWhiteboardSnapshot(roomId, snapshotData) {
+    this.whiteboards.set(roomId, snapshotData);
   }
 }
