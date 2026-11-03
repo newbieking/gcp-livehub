@@ -2,7 +2,10 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f172a">
   <title>Real-time Interactive Hub | GCP Cloud Run</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,8 +14,11 @@
 </head>
 <body>
   <div class="app-container">
+    <!-- 移动端侧栏遮罩层 -->
+    <div class="sidebar-backdrop hidden" id="sidebarBackdrop"></div>
+
     <!-- 侧边导航栏 -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="brand">
           <div class="brand-icon">⚡</div>
@@ -21,6 +27,7 @@
             <span class="badge-tech">ESM + Socket.IO</span>
           </div>
         </div>
+        <button class="mobile-close-sidebar-btn" id="closeSidebarBtn" title="收起菜单">&times;</button>
       </div>
 
       <!-- 用户身份配置 -->
@@ -84,6 +91,7 @@
       <div class="chat-content-area" id="chatContentArea">
         <!-- 视口顶栏 -->
         <header class="chat-header">
+          <button class="mobile-menu-btn" id="mobileChatMenuBtn" aria-label="展开导航">☰</button>
           <div class="room-info">
             <div class="header-title-row">
               <span class="chat-mode-badge" id="chatModeBadge">公共频道</span>
@@ -131,6 +139,7 @@
       <section class="whiteboard-viewport hidden" id="whiteboardViewport">
         <!-- 白板控制顶栏 -->
         <header class="wb-toolbar">
+          <button class="mobile-menu-btn" id="mobileWbMenuBtn" aria-label="展开导航">☰</button>
           <!-- 绘图工具组 -->
           <div class="wb-tool-group" id="wbToolGroup">
             <button class="wb-tool-btn active" data-tool="pencil" title="自由画笔 (Pencil)">
@@ -233,6 +242,121 @@
             <input type="text" id="wbMiniChatInput" placeholder="输入消息..." maxlength="200" autocomplete="off">
             <button type="submit">发送</button>
           </form>
+        </div>
+      </section>
+
+      <!-- 🎮 实时对战大厅视图区 -->
+      <section class="game-lobby-viewport hidden" id="gameLobbyViewport">
+        <!-- 1. 大厅桌台列表视口 -->
+        <div class="lobby-browser" id="lobbyBrowser">
+          <header class="lobby-header">
+            <div class="lobby-header-title-box">
+              <button class="mobile-menu-btn" id="mobileLobbyMenuBtn" aria-label="展开导航">☰</button>
+              <div class="lobby-title-wrap">
+                <h2>🎮 在线实时对战大厅</h2>
+                <p>自由创建桌台、邀请好友即时对战，支持随时插拔扩展新游戏</p>
+              </div>
+            </div>
+            <div class="lobby-actions">
+              <button class="btn btn-primary" id="openCreateTableModalBtn">
+                <span class="btn-icon">＋</span> 创建游戏桌台
+              </button>
+            </div>
+          </header>
+
+          <div class="lobby-filter-bar">
+            <div class="filter-chips" id="gameFilterChips">
+              <button class="chip active" data-game="all">全部游戏</button>
+            </div>
+            <button class="btn btn-sm btn-outline" id="refreshTablesBtn">🔄 刷新桌台</button>
+          </div>
+
+          <!-- 桌台卡片列表网格 -->
+          <div class="tables-grid" id="tablesGrid">
+            <!-- 动态渲染桌台卡片 -->
+          </div>
+        </div>
+
+        <!-- 2. 桌台等待与对战视口 (进入桌台后显示) -->
+        <div class="table-stage hidden" id="tableStage">
+          <header class="table-stage-header">
+            <div class="table-info-meta">
+              <button class="mobile-menu-btn" id="mobileTableMenuBtn" aria-label="展开导航">☰</button>
+              <button class="btn btn-sm btn-outline" id="leaveTableBtn">← 退出桌台</button>
+              <div class="table-header-titles">
+                <h3 id="currentTableName">游戏桌台</h3>
+                <span class="table-game-tag" id="currentGameTag">🎮 游戏</span>
+              </div>
+            </div>
+
+            <!-- 控制按钮组 (房主开局 / 玩家准备) -->
+            <div class="table-ctrl-group">
+              <span class="table-status-hint" id="tableStatusHint">等待玩家加入...</span>
+              <button class="btn btn-success hidden" id="tableReadyBtn">✓ 准备</button>
+              <button class="btn btn-primary hidden" id="tableStartBtn" disabled>🚀 开始对战</button>
+            </div>
+          </header>
+
+          <!-- 动态座位面板 -->
+          <div class="table-seats-panel">
+            <div class="seats-row" id="seatsRow">
+              <!-- 动态根据游戏 maxPlayers 渲染座位 -->
+            </div>
+          </div>
+
+          <!-- 游戏对战竞技场 (游戏启动后激活) -->
+          <div class="game-arena-container hidden" id="gameArenaContainer">
+            <!-- 游戏内状态看板 (当前轮到谁、回合提示) -->
+            <div class="game-hud" id="gameHud">
+              <div class="turn-indicator" id="turnIndicator">轮到玩家对弈</div>
+              <div class="game-role-badge" id="myRoleBadge">身份: 观战</div>
+            </div>
+
+            <!-- 具体游戏渲染容器 (支持挂载各插件视图) -->
+            <div class="game-render-box" id="gameRenderBox">
+              <!-- 五子棋棋盘或骰子战场动态注入 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 创建桌台模态弹窗 -->
+        <div class="modal-backdrop hidden" id="createTableModal">
+          <div class="modal-card">
+            <div class="modal-header">
+              <h3>创建游戏桌台</h3>
+              <button class="modal-close-btn" id="closeCreateTableModalBtn">&times;</button>
+            </div>
+            <form id="createTableForm">
+              <div class="form-group">
+                <label for="newTableNameInput">桌台名称</label>
+                <input type="text" id="newTableNameInput" maxlength="20" placeholder="为桌台起个响亮名字" required>
+              </div>
+              <div class="form-group">
+                <label for="selectGameType">选择对战小游戏</label>
+                <select id="selectGameType" class="form-select">
+                  <option value="gomoku">⚪ 五子棋 (Gomoku) (2~2人)</option>
+                  <option value="dice_battle">🎲 骰子大决战 (Dice Battle) (2~4人)</option>
+                </select>
+                <p class="form-hint" id="gameMetaDesc">经典双人轮流落子，横竖斜率先连成五子者获胜 | 游戏人数：最低 2 人，最多 2 人</p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="cancelCreateTableBtn">取消</button>
+                <button type="submit" class="btn btn-primary">立即创建</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- 游戏结算胜负弹窗 -->
+        <div class="modal-backdrop hidden" id="gameOverModal">
+          <div class="modal-card game-over-card">
+            <div class="game-over-icon" id="gameOverIcon">🏆</div>
+            <h3 id="gameOverTitle">对战结束</h3>
+            <p id="gameOverDesc">对局结算说明</p>
+            <div class="modal-footer justify-center">
+              <button class="btn btn-primary" id="closeGameOverModalBtn">返回桌台</button>
+            </div>
+          </div>
         </div>
       </section>
     </main>

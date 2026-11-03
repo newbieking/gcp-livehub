@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { createSocketConnection } from './socket.js';
 import { WhiteboardController } from './whiteboard.js';
+import { LobbyController } from './lobby.js';
 import {
   dom,
   initUIBindings,
@@ -32,8 +33,9 @@ const socket = createSocketConnection(
   updateTransport
 );
 
-// 初始化多人协作白板控制器
+// 初始化多人协作白板控制器与实时对战大厅控制器
 const whiteboard = new WhiteboardController(socket, state);
+const lobby = new LobbyController(socket, state);
 
 // ----------------------------------------
 // 1. 聊天室/私聊会话切换逻辑
@@ -48,20 +50,35 @@ function switchToRoom(roomName) {
   state.clearUnread(`room:${roomName}`);
   state.setActiveConversation('room', roomName, roomName);
 
-  // 白板视图与常规聊天视图切换调度
+  // 视口切换调度：聊天室 / 白板 / 实时对战大厅
   const chatContentArea = document.getElementById('chatContentArea');
   const whiteboardViewport = document.getElementById('whiteboardViewport');
+  const gameLobbyViewport = document.getElementById('gameLobbyViewport');
 
   if (roomName === '多人协同白板') {
     if (chatContentArea) chatContentArea.classList.add('hidden');
+    if (gameLobbyViewport) gameLobbyViewport.classList.add('hidden');
     if (whiteboardViewport) {
       whiteboardViewport.classList.remove('hidden');
       whiteboard.activate(roomName);
+    }
+  } else if (roomName === '实时对战大厅') {
+    if (chatContentArea) chatContentArea.classList.add('hidden');
+    if (whiteboardViewport) {
+      whiteboard.deactivate();
+      whiteboardViewport.classList.add('hidden');
+    }
+    if (gameLobbyViewport) {
+      gameLobbyViewport.classList.remove('hidden');
+      lobby.activate();
     }
   } else {
     if (whiteboardViewport && !whiteboardViewport.classList.contains('hidden')) {
       whiteboard.deactivate();
       whiteboardViewport.classList.add('hidden');
+    }
+    if (gameLobbyViewport) {
+      gameLobbyViewport.classList.add('hidden');
     }
     if (chatContentArea) chatContentArea.classList.remove('hidden');
   }
@@ -86,6 +103,11 @@ function switchToRoom(roomName) {
     targetId: `room:${roomName}`,
     lastReadTime: Date.now()
   });
+
+  // 移动端切换房间后自动收起抽屉
+  if (window.innerWidth <= 768) {
+    closeMobileSidebar();
+  }
 }
 
 function switchToDM(user) {
@@ -93,12 +115,17 @@ function switchToDM(user) {
   state.clearUnread(`dm:${user.userId}`);
   state.setActiveConversation('dm', user.userId, user.username);
 
-  // 离开白板视图切回私聊
+  // 离开白板或大厅切回私聊
   const chatContentArea = document.getElementById('chatContentArea');
   const whiteboardViewport = document.getElementById('whiteboardViewport');
+  const gameLobbyViewport = document.getElementById('gameLobbyViewport');
+
   if (whiteboardViewport && !whiteboardViewport.classList.contains('hidden')) {
     whiteboard.deactivate();
     whiteboardViewport.classList.add('hidden');
+  }
+  if (gameLobbyViewport) {
+    gameLobbyViewport.classList.add('hidden');
   }
   if (chatContentArea) chatContentArea.classList.remove('hidden');
 
@@ -119,6 +146,40 @@ function switchToDM(user) {
     targetId: `dm:${user.userId}`,
     lastReadTime: Date.now()
   });
+
+  // 移动端切换私聊后自动收起抽屉
+  if (window.innerWidth <= 768) {
+    closeMobileSidebar();
+  }
+}
+
+// ----------------------------------------
+// 移动端侧滑抽屉控制
+// ----------------------------------------
+const sidebarEl = document.getElementById('sidebar');
+const sidebarBackdropEl = document.getElementById('sidebarBackdrop');
+const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+
+function openMobileSidebar() {
+  if (sidebarEl) sidebarEl.classList.add('open');
+  if (sidebarBackdropEl) sidebarBackdropEl.classList.remove('hidden');
+}
+
+function closeMobileSidebar() {
+  if (sidebarEl) sidebarEl.classList.remove('open');
+  if (sidebarBackdropEl) sidebarBackdropEl.classList.add('hidden');
+}
+
+document.querySelectorAll('.mobile-menu-btn').forEach(btn => {
+  btn.addEventListener('click', openMobileSidebar);
+});
+
+if (closeSidebarBtn) {
+  closeSidebarBtn.addEventListener('click', closeMobileSidebar);
+}
+
+if (sidebarBackdropEl) {
+  sidebarBackdropEl.addEventListener('click', closeMobileSidebar);
 }
 
 // 绑定公共房间点击

@@ -4,6 +4,7 @@ import { registerConnectionHandlers } from './connectionHandler.js';
 import { registerRoomHandlers } from './roomHandler.js';
 import { registerDirectMessageHandlers } from './directMessageHandler.js';
 import { registerWhiteboardHandlers } from './whiteboardHandler.js';
+import { registerTableHandlers } from './tableHandler.js';
 
 /**
  * Socket.IO 核心装配层
@@ -28,6 +29,9 @@ export function initSocketServer(httpServer) {
 
     // 注册多人协同白板实时网关
     registerWhiteboardHandlers(io, socket);
+
+    // 注册实时对战大厅与游戏桌台信令
+    registerTableHandlers(io, socket);
   });
 
   return io;

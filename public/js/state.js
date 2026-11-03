@@ -52,6 +52,11 @@ class AppState {
     this.clearUnread(`room:${DEFAULT_ROOM}`);
   }
 
+  // 兼容别名属性访问，防止 currentUser 误访问报错
+  get currentUser() {
+    return this.user;
+  }
+
   getUnreadStorageKey() {
     return `${STORAGE_KEYS.UNREAD_PREFIX}${this.user.userId}`;
   }
