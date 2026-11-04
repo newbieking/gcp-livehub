@@ -63,6 +63,9 @@ export class WhiteboardController {
     this.bindSocketEvents();
 
     window.addEventListener('resize', () => this.handleResize());
+    window.addEventListener('livehub:theme-changed', () => {
+      this.redrawAll();
+    });
   }
 
   /**
@@ -307,14 +310,16 @@ export class WhiteboardController {
 
     const ctx = this.overlayCtx;
     ctx.save();
-    ctx.strokeStyle = this.currentTool === 'eraser' ? '#ffffff' : this.currentColor;
-    ctx.lineWidth = this.strokeWidth;
+    if (this.currentTool === 'eraser') {
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+      ctx.lineWidth = this.strokeWidth * 3;
+      ctx.setLineDash([4, 4]);
+    } else {
+      ctx.strokeStyle = this.currentColor;
+      ctx.lineWidth = this.strokeWidth;
+    }
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-
-    if (this.currentTool === 'eraser') {
-      ctx.setLineDash([4, 4]);
-    }
 
     if (this.currentTool === 'pencil' || this.currentTool === 'eraser') {
       this.renderPoints(ctx, this.currentPoints);

@@ -33,12 +33,12 @@ export function initUIBindings() {
 export function updateHeader() {
   const { type, targetName } = state.activeConversation;
   if (type === 'dm') {
-    dom.chatModeBadge.textContent = '🔒 私密会话';
+    dom.chatModeBadge.textContent = '私聊会话';
     dom.chatModeBadge.className = 'chat-mode-badge dm';
     dom.chatTitle.textContent = `@ ${targetName}`;
     dom.chatSubtitle.textContent = '端对端私聊通道 · 具备精准打字状态反馈';
   } else {
-    dom.chatModeBadge.textContent = '📢 公共频道';
+    dom.chatModeBadge.textContent = '公共频道';
     dom.chatModeBadge.className = 'chat-mode-badge';
     dom.chatTitle.textContent = targetName;
     dom.chatSubtitle.textContent = '房间广播通道 · 毫秒级广播';

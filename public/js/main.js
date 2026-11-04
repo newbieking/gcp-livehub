@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { createSocketConnection } from './socket.js';
 import { WhiteboardController } from './whiteboard.js';
 import { LobbyController } from './lobby.js';
+import { themeManager, initThemeUI } from './theme.js';
 import {
   dom,
   initUIBindings,
@@ -17,6 +18,10 @@ import {
   ensureRoomInList,
   updateDocumentTitle
 } from './ui.js';
+
+// 初始化主题引擎与交互
+themeManager.init();
+initThemeUI(themeManager);
 
 // 初始化 UI
 initUIBindings();

@@ -8,15 +8,15 @@ const DEFAULT_GAMES = [
     description: '经典双人轮流落子，横竖斜率先连成五子者获胜',
     minPlayers: 2,
     maxPlayers: 2,
-    icon: '⚪'
+    icon: ''
   },
   {
     id: 'dice_battle',
     name: '骰子大决战 (Dice Battle)',
-    description: '动态 2~4 人对战！每人掷骰比拼点数总和与幸运组合',
+    description: '动态 2~4 人对战，每人掷骰比拼点数总和与幸运组合',
     minPlayers: 2,
     maxPlayers: 4,
-    icon: '🎲'
+    icon: ''
   }
 ];
 
@@ -308,7 +308,14 @@ export class LobbyController {
     if (filtered.length === 0) {
       this.dom.tablesGrid.innerHTML = `
         <div class="empty-state">
-          <p>🏜️ 暂无进行中的桌台，快点击右上角创建第一张桌台吧！</p>
+          <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="6" x2="10" y1="12" y2="12"></line>
+            <line x1="8" x2="8" y1="10" y2="14"></line>
+            <line x1="15" x2="15.01" y1="13" y2="13"></line>
+            <line x1="18" x2="18.01" y1="11" y2="11"></line>
+            <rect width="20" height="12" x="2" y="6" rx="6"></rect>
+          </svg>
+          <p>暂无进行中的桌台，点击上方按钮创建第一张桌台</p>
         </div>
       `;
       return;
@@ -317,13 +324,13 @@ export class LobbyController {
     this.dom.tablesGrid.innerHTML = filtered.map(t => {
       const isPlaying = t.status === 'PLAYING';
       const statusPillClass = isPlaying ? 'playing' : 'waiting';
-      const statusText = isPlaying ? '● 激战中' : '● 等待玩家';
+      const statusText = isPlaying ? '激战中' : '等待玩家';
       const isFull = t.seatedCount >= t.maxPlayers;
 
       return `
         <div class="table-card">
           <div class="table-card-top">
-            <span class="table-game-badge">${t.gameIcon} ${t.gameName}</span>
+            <span class="table-game-badge">${t.gameName}</span>
             <span class="table-status-pill ${statusPillClass}">${statusText}</span>
           </div>
           <div class="table-name">${this.escapeHtml(t.tableName)}</div>
@@ -332,7 +339,7 @@ export class LobbyController {
             <span>最低开局: ${t.minPlayers} 人</span>
           </div>
           <div class="table-card-footer">
-            <span class="table-players-progress">👥 座位: ${t.seatedCount}/${t.maxPlayers}</span>
+            <span class="table-players-progress">座位: ${t.seatedCount}/${t.maxPlayers}</span>
             <button class="btn btn-sm btn-primary join-table-btn" data-table-id="${t.tableId}" ${isPlaying || isFull ? 'disabled' : ''}>
               ${isPlaying ? '对战中' : (isFull ? '已满座' : '加入桌台')}
             </button>
@@ -377,7 +384,7 @@ export class LobbyController {
     if (table.status === 'PLAYING') {
       this.dom.tableReadyBtn.classList.add('hidden');
       this.dom.tableStartBtn.classList.add('hidden');
-      this.dom.tableStatusHint.textContent = '🔥 游戏正在进行中...';
+      this.dom.tableStatusHint.textContent = '游戏正在进行中...';
     } else if (isHost) {
       this.dom.tableReadyBtn.classList.add('hidden');
       this.dom.tableStartBtn.classList.remove('hidden');
@@ -388,17 +395,17 @@ export class LobbyController {
 
       this.dom.tableStartBtn.disabled = !canStart;
       if (canStart) {
-        this.dom.tableStatusHint.textContent = `✅ 已满足最低 ${table.minPlayers} 人就绪，您可以开启游戏！`;
+        this.dom.tableStatusHint.textContent = `已满足最低 ${table.minPlayers} 人就绪，可以开启游戏`;
       } else {
-        this.dom.tableStatusHint.textContent = `⏳ 还需准备 (就坐 ${seatedPlayers.length}/${table.minPlayers} 人，就绪 ${countReady}/${seatedPlayers.length})`;
+        this.dom.tableStatusHint.textContent = `就坐 ${seatedPlayers.length}/${table.minPlayers} 人，就绪 ${countReady}/${seatedPlayers.length}`;
       }
     } else {
       this.dom.tableStartBtn.classList.add('hidden');
       this.dom.tableReadyBtn.classList.remove('hidden');
       const isReady = mySeat?.isReady || false;
-      this.dom.tableReadyBtn.textContent = isReady ? '✕ 取消准备' : '✓ 点击准备';
+      this.dom.tableReadyBtn.textContent = isReady ? '取消准备' : '准备';
       this.dom.tableReadyBtn.className = isReady ? 'btn btn-outline' : 'btn btn-success';
-      this.dom.tableStatusHint.textContent = isReady ? '您已准备，等待房主发车...' : '请点击准备';
+      this.dom.tableStatusHint.textContent = isReady ? '您已准备，等待房主开始...' : '请点击准备';
     }
 
     // 动态渲染座位卡片
@@ -406,7 +413,7 @@ export class LobbyController {
       if (!seat) {
         return `
           <div class="seat-card empty" data-seat="${index}">
-            <span class="seat-empty-text">＋ 空位 ${index + 1}</span>
+            <span class="seat-empty-text">空位 ${index + 1}</span>
             <span style="font-size:0.7rem; color:var(--text-muted)">点击就坐</span>
           </div>
         `;
@@ -417,11 +424,11 @@ export class LobbyController {
 
       return `
         <div class="seat-card">
-          ${isThisHost ? '<span class="seat-host-badge" title="房主">👑 房主</span>' : ''}
+          ${isThisHost ? '<span class="seat-host-badge" title="房主">房主</span>' : ''}
           <div class="seat-avatar">${initial}</div>
           <div class="seat-name" title="${this.escapeHtml(seat.username)}">${this.escapeHtml(seat.username)}</div>
           <span class="seat-ready-tag ${seat.isReady ? 'ready' : 'waiting'}">
-            ${seat.isReady ? '✓ 已就绪' : '… 等待中'}
+            ${seat.isReady ? '已就绪' : '等待中'}
           </span>
         </div>
       `;
@@ -470,15 +477,15 @@ export class LobbyController {
     const myRole = state.playerRoles[myUserId];
 
     if (myRole) {
-      this.dom.myRoleBadge.textContent = `我的阵营: ${myRole.roleName} (${myRole.role === 1 ? '⚫' : '⚪'})`;
+      this.dom.myRoleBadge.textContent = `阵营: ${myRole.roleName}`;
     } else {
       this.dom.myRoleBadge.textContent = '身份: 旁观者';
     }
 
     const isMyTurn = state.currentTurnPlayerId === myUserId;
-    const turnRoleName = state.currentTurnRole === 1 ? '黑方 (⚫)' : '白方 (⚪)';
-    this.dom.turnIndicator.textContent = isMyTurn ? `👉 轮到您落子！(${turnRoleName})` : `⏳ 等待对方落子... (${turnRoleName})`;
-    this.dom.turnIndicator.style.color = isMyTurn ? '#38bdf8' : '#94a3b8';
+    const turnRoleName = state.currentTurnRole === 1 ? '黑方' : '白方';
+    this.dom.turnIndicator.textContent = isMyTurn ? `轮到您落子 (${turnRoleName})` : `等待对方落子 (${turnRoleName})`;
+    this.dom.turnIndicator.style.color = isMyTurn ? 'var(--accent-primary)' : 'var(--text-secondary)';
 
     // 如果退出对战或回合切换给对方，重置选中状态
     if (!isMyTurn || state.currentTurnPlayerId !== myUserId) {
@@ -519,7 +526,7 @@ export class LobbyController {
           </div>
           <div class="confirm-bar-actions">
             <button class="btn btn-sm btn-outline" id="cancelMoveBtn">重选</button>
-            <button class="btn btn-sm btn-primary" id="confirmMoveBtn">🚀 确认落子</button>
+            <button class="btn btn-sm btn-primary" id="confirmMoveBtn">确认落子</button>
           </div>
         </div>
       `;
@@ -584,8 +591,8 @@ export class LobbyController {
     const myUserId = this.getUserId();
     const myPlayer = state.playerStates[myUserId];
 
-    this.dom.myRoleBadge.textContent = '🎲 骰子大乱斗';
-    this.dom.turnIndicator.textContent = '比拼幸运总点数，请掷出您的命运之骰！';
+    this.dom.myRoleBadge.textContent = '骰子决战';
+    this.dom.turnIndicator.textContent = '比拼点数总和，掷出点数';
 
     const diceIcons = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
@@ -598,7 +605,7 @@ export class LobbyController {
       const isMe = p.userId === myUserId;
       const dicesStr = p.hasRolled
         ? p.dices.map(d => diceIcons[d] || d).join(' ')
-        : '❓ ❓ ❓';
+        : '- - -';
       const scoreStr = p.hasRolled ? `${p.totalScore} 点` : '等待掷骰...';
 
       html += `
@@ -614,7 +621,7 @@ export class LobbyController {
         </div>
         ${myPlayer && !myPlayer.hasRolled ? `
           <button class="btn btn-primary" id="rollDiceBtn" style="padding: 12px 32px; font-size: 1.1rem;">
-            🎲 掷骰子！
+            掷骰子
           </button>
         ` : (myPlayer?.hasRolled ? `<p style="color:var(--text-muted);font-size:0.85rem">您已完成掷骰，等待其他玩家...</p>` : '')}
       </div>
@@ -636,10 +643,8 @@ export class LobbyController {
   showGameOverModal(gameOver) {
     this.dom.gameOverModal.classList.remove('hidden');
     if (gameOver.isDraw) {
-      this.dom.gameOverIcon.textContent = '🤝';
       this.dom.gameOverTitle.textContent = '握手言和';
     } else {
-      this.dom.gameOverIcon.textContent = '🏆';
       this.dom.gameOverTitle.textContent = '对战胜负已分';
     }
     this.dom.gameOverDesc.textContent = gameOver.reason || '恭喜获胜玩家！';

@@ -6,6 +6,25 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0f172a">
+  <script>
+    (function() {
+      try {
+        const saved = localStorage.getItem('livehub_theme_preference') || 'cyber-slate';
+        let effective = saved;
+        if (saved === 'system') {
+          effective = window.matchMedia('(prefers-color-scheme: light)').matches ? 'nordic-clean' : 'cyber-slate';
+        }
+        document.documentElement.setAttribute('data-theme', effective);
+        const meta = document.querySelector('meta[name="theme-color"]');
+        const colors = {
+          'cyber-slate': '#0f172a',
+          'nordic-clean': '#f1f5f9',
+          'midnight-oled': '#000000'
+        };
+        if (meta && colors[effective]) meta.setAttribute('content', colors[effective]);
+      } catch(e) {}
+    })();
+  </script>
   <title>Real-time Interactive Hub | GCP Cloud Run</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,7 +40,11 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="brand">
-          <div class="brand-icon">⚡</div>
+          <div class="brand-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+          </div>
           <div class="brand-text">
             <h2>GCP LiveHub</h2>
             <span class="badge-tech">ESM + Socket.IO</span>
@@ -38,22 +61,81 @@
         </div>
         <div class="input-inline">
           <input type="text" id="usernameInput" maxlength="20" placeholder="设置你的昵称">
-          <button id="saveUsernameBtn" title="保存昵称">✓</button>
+          <button id="saveUsernameBtn" title="保存昵称">保存</button>
+        </div>
+      </div>
+
+      <!-- 界面主题与装扮控制条 -->
+      <div class="theme-bar-wrap" id="themeBarWrap">
+        <div class="theme-segmented-control" role="group" aria-label="主题切换">
+          <button class="theme-segment-btn" data-theme-id="nordic-clean" title="北欧纸白 (明亮)" aria-label="切换至明亮纸白主题">
+            <svg class="theme-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2"></path>
+              <path d="M12 20v2"></path>
+              <path d="m4.93 4.93 1.41 1.41"></path>
+              <path d="m17.66 17.66 1.41 1.41"></path>
+              <path d="M2 12h2"></path>
+              <path d="M20 12h2"></path>
+              <path d="m6.34 17.66-1.41 1.41"></path>
+              <path d="m19.07 4.93-1.41 1.41"></path>
+            </svg>
+            <span class="theme-btn-label">纸白</span>
+          </button>
+          <button class="theme-segment-btn active" data-theme-id="cyber-slate" title="深空矿石 (默认暗色)" aria-label="切换至深空暗色主题">
+            <svg class="theme-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+            </svg>
+            <span class="theme-btn-label">深空</span>
+          </button>
+          <button class="theme-segment-btn" data-theme-id="midnight-oled" title="极夜纯黑 (OLED省电)" aria-label="切换至纯黑极夜主题">
+            <svg class="theme-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 3v18"></path>
+            </svg>
+            <span class="theme-btn-label">极夜</span>
+          </button>
+          <button class="theme-segment-btn" data-theme-id="system" title="跟随系统" aria-label="跟随系统自动调节">
+            <svg class="theme-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+              <line x1="8" x2="16" y1="21" y2="21"></line>
+              <line x1="12" x2="12" y1="17" y2="21"></line>
+            </svg>
+            <span class="theme-btn-label">自动</span>
+          </button>
+          <button class="theme-hub-trigger-btn" id="openCosmeticsHubBtn" title="装扮中心与个性化" aria-label="打开装扮中心">
+            <svg class="theme-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+              <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+              <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+              <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C21.996 6.375 17.5 2 12 2Z"></path>
+            </svg>
+          </button>
         </div>
       </div>
 
       <!-- 频道与私聊会话切换 -->
       <div class="nav-section">
-        <div class="section-title">📢 公共频道</div>
+        <div class="section-title">公共频道</div>
         <ul class="nav-list" id="roomList">
           <li class="active" data-room="大厅讨论区">
-            <span class="nav-item-title">💬 大厅讨论区</span>
+            <span class="nav-item-title">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <span>大厅讨论区</span>
+            </span>
           </li>
           <li data-room="实时对战大厅">
-            <span class="nav-item-title">🎮 实时对战大厅</span>
+            <span class="nav-item-title">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" x2="10" y1="12" y2="12"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="15" x2="15.01" y1="13" y2="13"></line><line x1="18" x2="18.01" y1="11" y2="11"></line><rect width="20" height="12" x="2" y="6" rx="6"></rect></svg>
+              <span>实时对战大厅</span>
+            </span>
           </li>
           <li data-room="多人协同白板">
-            <span class="nav-item-title">📝 多人协同白板</span>
+            <span class="nav-item-title">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              <span>多人协同白板</span>
+            </span>
           </li>
         </ul>
         <div class="custom-room-box">
@@ -65,7 +147,7 @@
       <!-- 在线用户列表（点击即刻发起 1v1 私聊） -->
       <div class="nav-section users-section">
         <div class="section-title">
-          <span>💬 私聊会话 / 在线用户</span>
+          <span>私聊会话 / 在线用户</span>
           <span class="online-count-badge" id="onlineCountBadge">0</span>
         </div>
         <p class="section-hint">点击任意成员直接开启 1v1 私聊与输入状态感知</p>
@@ -91,11 +173,13 @@
       <div class="chat-content-area" id="chatContentArea">
         <!-- 视口顶栏 -->
         <header class="chat-header">
-          <button class="mobile-menu-btn" id="mobileChatMenuBtn" aria-label="展开导航">☰</button>
+          <button class="mobile-menu-btn" id="mobileChatMenuBtn" aria-label="展开导航">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
           <div class="room-info">
             <div class="header-title-row">
               <span class="chat-mode-badge" id="chatModeBadge">公共频道</span>
-              <h1 id="chatTitle">💬 大厅讨论区</h1>
+              <h1 id="chatTitle">大厅讨论区</h1>
             </div>
             <p id="chatSubtitle">已连接至云端实时长连接通道</p>
           </div>
@@ -139,7 +223,9 @@
       <section class="whiteboard-viewport hidden" id="whiteboardViewport">
         <!-- 白板控制顶栏 -->
         <header class="wb-toolbar">
-          <button class="mobile-menu-btn" id="mobileWbMenuBtn" aria-label="展开导航">☰</button>
+          <button class="mobile-menu-btn" id="mobileWbMenuBtn" aria-label="展开导航">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
           <!-- 绘图工具组 -->
           <div class="wb-tool-group" id="wbToolGroup">
             <button class="wb-tool-btn active" data-tool="pencil" title="自由画笔 (Pencil)">
@@ -214,9 +300,9 @@
 
           <!-- 右侧状态：在线协作与微型聊天抽屉切换 -->
           <div class="wb-status-group">
-            <span class="wb-online-tag" id="wbCollaboratorsCount">⚡ 多人协同就绪</span>
+            <span class="wb-online-tag" id="wbCollaboratorsCount">多人协同就绪</span>
             <button id="wbToggleMiniChatBtn" class="wb-action-btn btn-accent-soft" title="展开/收起边画边聊抽屉">
-              💬 边画边聊
+              边画边聊
             </button>
           </div>
         </header>
@@ -234,7 +320,7 @@
         <!-- 浮动微型聊天抽屉 (边画边聊) -->
         <div class="wb-mini-chat-drawer hidden" id="wbMiniChatDrawer">
           <div class="wb-mini-chat-header">
-            <span>💬 白板实时讨论</span>
+            <span>白板实时讨论</span>
             <button id="wbCloseMiniChatBtn" class="close-btn" title="收起">&times;</button>
           </div>
           <div class="wb-mini-chat-messages" id="wbMiniChatMessages"></div>
@@ -245,21 +331,23 @@
         </div>
       </section>
 
-      <!-- 🎮 实时对战大厅视图区 -->
+      <!-- 实时对战大厅视图区 -->
       <section class="game-lobby-viewport hidden" id="gameLobbyViewport">
         <!-- 1. 大厅桌台列表视口 -->
         <div class="lobby-browser" id="lobbyBrowser">
           <header class="lobby-header">
             <div class="lobby-header-title-box">
-              <button class="mobile-menu-btn" id="mobileLobbyMenuBtn" aria-label="展开导航">☰</button>
+              <button class="mobile-menu-btn" id="mobileLobbyMenuBtn" aria-label="展开导航">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              </button>
               <div class="lobby-title-wrap">
-                <h2>🎮 在线实时对战大厅</h2>
+                <h2>在线实时对战大厅</h2>
                 <p>自由创建桌台、邀请好友即时对战，支持随时插拔扩展新游戏</p>
               </div>
             </div>
             <div class="lobby-actions">
               <button class="btn btn-primary" id="openCreateTableModalBtn">
-                <span class="btn-icon">＋</span> 创建游戏桌台
+                创建游戏桌台
               </button>
             </div>
           </header>
@@ -268,7 +356,7 @@
             <div class="filter-chips" id="gameFilterChips">
               <button class="chip active" data-game="all">全部游戏</button>
             </div>
-            <button class="btn btn-sm btn-outline" id="refreshTablesBtn">🔄 刷新桌台</button>
+            <button class="btn btn-sm btn-outline" id="refreshTablesBtn">刷新桌台</button>
           </div>
 
           <!-- 桌台卡片列表网格 -->
@@ -281,19 +369,21 @@
         <div class="table-stage hidden" id="tableStage">
           <header class="table-stage-header">
             <div class="table-info-meta">
-              <button class="mobile-menu-btn" id="mobileTableMenuBtn" aria-label="展开导航">☰</button>
+              <button class="mobile-menu-btn" id="mobileTableMenuBtn" aria-label="展开导航">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              </button>
               <button class="btn btn-sm btn-outline" id="leaveTableBtn">← 退出桌台</button>
               <div class="table-header-titles">
                 <h3 id="currentTableName">游戏桌台</h3>
-                <span class="table-game-tag" id="currentGameTag">🎮 游戏</span>
+                <span class="table-game-tag" id="currentGameTag">游戏</span>
               </div>
             </div>
 
             <!-- 控制按钮组 (房主开局 / 玩家准备) -->
             <div class="table-ctrl-group">
               <span class="table-status-hint" id="tableStatusHint">等待玩家加入...</span>
-              <button class="btn btn-success hidden" id="tableReadyBtn">✓ 准备</button>
-              <button class="btn btn-primary hidden" id="tableStartBtn" disabled>🚀 开始对战</button>
+              <button class="btn btn-success hidden" id="tableReadyBtn">准备</button>
+              <button class="btn btn-primary hidden" id="tableStartBtn" disabled>开始对战</button>
             </div>
           </header>
 
@@ -334,8 +424,8 @@
               <div class="form-group">
                 <label for="selectGameType">选择对战小游戏</label>
                 <select id="selectGameType" class="form-select">
-                  <option value="gomoku">⚪ 五子棋 (Gomoku) (2~2人)</option>
-                  <option value="dice_battle">🎲 骰子大决战 (Dice Battle) (2~4人)</option>
+                  <option value="gomoku">五子棋 (Gomoku) (2人对战)</option>
+                  <option value="dice_battle">骰子大决战 (Dice Battle) (2~4人)</option>
                 </select>
                 <p class="form-hint" id="gameMetaDesc">经典双人轮流落子，横竖斜率先连成五子者获胜 | 游戏人数：最低 2 人，最多 2 人</p>
               </div>
@@ -350,11 +440,41 @@
         <!-- 游戏结算胜负弹窗 -->
         <div class="modal-backdrop hidden" id="gameOverModal">
           <div class="modal-card game-over-card">
-            <div class="game-over-icon" id="gameOverIcon">🏆</div>
+            <div class="game-over-icon" id="gameOverIcon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                <path d="M4 22h16"></path>
+                <path d="M10 14.66V17c0 .55-.45 1-1 1H7"></path>
+                <path d="M14 14.66V17c0 .55.45 1 1 1h2"></path>
+                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+              </svg>
+            </div>
             <h3 id="gameOverTitle">对战结束</h3>
             <p id="gameOverDesc">对局结算说明</p>
             <div class="modal-footer justify-center">
               <button class="btn btn-primary" id="closeGameOverModalBtn">返回桌台</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 界面主题与装扮中心模态弹窗 (Cosmetics Hub) -->
+        <div class="modal-backdrop hidden" id="cosmeticsHubModal">
+          <div class="modal-card cosmetics-hub-card">
+            <div class="modal-header">
+              <div class="modal-title-wrap">
+                <h3 id="cosmeticsModalTitle">界面主题与装扮中心</h3>
+                <p class="modal-subtitle">自由切换设计风格，支持个性化扩展装扮</p>
+              </div>
+              <button class="modal-close-btn" id="closeCosmeticsHubBtn" aria-label="关闭">&times;</button>
+            </div>
+            <div class="cosmetics-hub-body">
+              <div class="cosmetics-themes-grid" id="cosmeticsThemesGrid">
+                <!-- 动态由 ThemeManager 渲染注册的主题卡片 -->
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-primary" id="confirmCosmeticsBtn">确定</button>
             </div>
           </div>
         </div>
