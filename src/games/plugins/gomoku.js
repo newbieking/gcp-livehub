@@ -12,7 +12,8 @@ export class GomokuGame extends BaseGame {
       description: '经典双人轮流落子，横竖斜率先连成五子者获胜',
       minPlayers: 2,
       maxPlayers: 2,
-      icon: '⚪'
+      iconKey: 'gomoku',
+      icon: ''
     });
     this.BOARD_SIZE = 15;
   }

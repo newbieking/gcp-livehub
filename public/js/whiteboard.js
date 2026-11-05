@@ -139,12 +139,12 @@ export class WhiteboardController {
     if (!this.collaboratorsCountTag) return;
     const count = collaborators.length;
     if (count <= 1) {
-      this.collaboratorsCountTag.textContent = '⚡ 协作准备就绪 (1人)';
-      this.collaboratorsCountTag.style.color = '#38bdf8';
+      this.collaboratorsCountTag.textContent = '协作准备就绪 (1人)';
+      this.collaboratorsCountTag.style.color = 'var(--accent-primary)';
     } else {
       const names = collaborators.map(u => u.username).join(', ');
-      this.collaboratorsCountTag.textContent = `⚡ 正在协作 (${count}人: ${names})`;
-      this.collaboratorsCountTag.style.color = '#10b981';
+      this.collaboratorsCountTag.textContent = `正在协作 (${count}人: ${names})`;
+      this.collaboratorsCountTag.style.color = 'var(--status-success-fg, var(--success))';
     }
   }
 
@@ -705,8 +705,9 @@ export class WhiteboardController {
     offscreen.height = this.height || 600;
     const offCtx = offscreen.getContext('2d');
 
-    // 填充科技暗黑底色
-    offCtx.fillStyle = '#0b1120';
+    // 填充与当前主题画布一致的底色
+    const computedCanvasBg = getComputedStyle(document.documentElement).getPropertyValue('--wb-canvas-bg').trim() || '#0b1120';
+    offCtx.fillStyle = computedCanvasBg;
     offCtx.fillRect(0, 0, offscreen.width, offscreen.height);
 
     // 绘制所有成型图元

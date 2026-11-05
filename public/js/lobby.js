@@ -1,3 +1,5 @@
+import { themeManager } from './theme.js';
+
 /**
  * 内置预置游戏元数据 (保障离线/弱网/未握手瞬间 UI 依然有默认选项可用)
  */
@@ -62,8 +64,12 @@ export class LobbyController {
       createModal: document.getElementById('createTableModal'),
       createForm: document.getElementById('createTableForm'),
       newTableNameInput: document.getElementById('newTableNameInput'),
+      randomizeTableNameBtn: document.getElementById('randomizeTableNameBtn'),
       selectGameType: document.getElementById('selectGameType'),
+      createGameCardsGrid: document.getElementById('createGameCardsGrid'),
       gameMetaDesc: document.getElementById('gameMetaDesc'),
+      selectedGamePlayerCount: document.getElementById('selectedGamePlayerCount'),
+      selectedGameTypeTag: document.getElementById('selectedGameTypeTag'),
 
       // 桌台舞台
       leaveTableBtn: document.getElementById('leaveTableBtn'),
@@ -199,12 +205,33 @@ export class LobbyController {
     });
 
     this.dom.openCreateModalBtn.addEventListener('click', () => {
-      // 每次打开弹窗前确保下拉框选项完整并刷新描述
+      // 每次打开弹窗前确保卡片与下拉框选项完整并刷新描述
       this.populateGameSelect();
       this.dom.newTableNameInput.value = `${this.getUsername()} 的游戏桌`;
       this.dom.createModal.classList.remove('hidden');
       setTimeout(() => this.dom.newTableNameInput.focus(), 50);
     });
+
+    // 随机桌台名称按钮
+    if (this.dom.randomizeTableNameBtn) {
+      const funNames = [
+        '巅峰博弈厅',
+        '极客对弈社',
+        '快乐摸鱼局',
+        '幸运骰王擂台',
+        '高手切磋雅室',
+        '黑白棋道馆',
+        '友谊第一交流室',
+        '云端闲趣局',
+        '周末决战夜'
+      ];
+      this.dom.randomizeTableNameBtn.addEventListener('click', () => {
+        const randName = funNames[Math.floor(Math.random() * funNames.length)];
+        const suffix = Math.floor(100 + Math.random() * 900);
+        this.dom.newTableNameInput.value = `${randName} #${suffix}`;
+        this.dom.newTableNameInput.focus();
+      });
+    }
 
     const closeModal = () => this.dom.createModal.classList.add('hidden');
     this.dom.closeCreateModalBtn.addEventListener('click', closeModal);
@@ -217,6 +244,7 @@ export class LobbyController {
 
     // 下拉框切换触发元信息描述变更
     this.dom.selectGameType.addEventListener('change', () => {
+      this.renderCreateGameCards();
       this.updateGameMetaDesc();
     });
 
@@ -268,10 +296,20 @@ export class LobbyController {
   // UI 渲染方法
   // ----------------------------------------
 
+  getGameIconSvg(gameId) {
+    if (gameId === 'gomoku') {
+      return `<svg class="chip-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/></svg>`;
+    }
+    if (gameId === 'dice_battle') {
+      return `<svg class="chip-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>`;
+    }
+    return '';
+  }
+
   renderFilterChips() {
     let html = `<button class="chip ${this.activeFilter === 'all' ? 'active' : ''}" data-game="all">全部游戏</button>`;
     this.gamesList.forEach(g => {
-      html += `<button class="chip ${this.activeFilter === g.id ? 'active' : ''}" data-game="${g.id}">${g.icon} ${g.name}</button>`;
+      html += `<button class="chip ${this.activeFilter === g.id ? 'active' : ''}" data-game="${g.id}">${this.getGameIconSvg(g.id)} <span>${g.name}</span></button>`;
     });
     this.dom.gameFilterChips.innerHTML = html;
 
@@ -287,16 +325,62 @@ export class LobbyController {
 
   populateGameSelect() {
     this.dom.selectGameType.innerHTML = this.gamesList.map(g =>
-      `<option value="${g.id}">${g.icon} ${g.name} (${g.minPlayers}~${g.maxPlayers}人)</option>`
+      `<option value="${g.id}">${g.name} (${g.minPlayers}~${g.maxPlayers}人)</option>`
     ).join('');
+    this.renderCreateGameCards();
     this.updateGameMetaDesc();
+  }
+
+  renderCreateGameCards() {
+    if (!this.dom.createGameCardsGrid) return;
+    const currentSelected = this.dom.selectGameType.value || this.gamesList[0]?.id;
+
+    let html = '';
+    this.gamesList.forEach(g => {
+      const isSelected = g.id === currentSelected;
+      const playerText = g.minPlayers === g.maxPlayers ? `${g.minPlayers}人对弈` : `${g.minPlayers}~${g.maxPlayers}人乱斗`;
+      const shortName = g.name.split(' (')[0];
+      html += `
+        <div class="create-game-card ${isSelected ? 'active' : ''}" data-game-id="${g.id}">
+          <div class="create-game-card-icon">
+            ${this.getGameIconSvg(g.id)}
+          </div>
+          <div class="create-game-card-info">
+            <div class="create-game-card-name">${shortName}</div>
+            <div class="create-game-card-players">${playerText}</div>
+          </div>
+          <div class="create-game-card-check">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        </div>
+      `;
+    });
+
+    this.dom.createGameCardsGrid.innerHTML = html;
+
+    this.dom.createGameCardsGrid.querySelectorAll('.create-game-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const gameId = card.getAttribute('data-game-id');
+        this.dom.selectGameType.value = gameId;
+        this.renderCreateGameCards();
+        this.updateGameMetaDesc();
+      });
+    });
   }
 
   updateGameMetaDesc() {
     const selectedId = this.dom.selectGameType.value;
     const game = this.gamesList.find(g => g.id === selectedId);
     if (game) {
-      this.dom.gameMetaDesc.textContent = `${game.description} | 游戏人数：最低 ${game.minPlayers} 人，最多 ${game.maxPlayers} 人`;
+      this.dom.gameMetaDesc.textContent = game.description;
+      if (this.dom.selectedGamePlayerCount) {
+        this.dom.selectedGamePlayerCount.textContent = game.minPlayers === game.maxPlayers
+          ? `${game.minPlayers}人对战`
+          : `${game.minPlayers}~${game.maxPlayers}人对战`;
+      }
+      if (this.dom.selectedGameTypeTag) {
+        this.dom.selectedGameTypeTag.textContent = game.id === 'gomoku' ? '经典策略' : '聚会娱乐';
+      }
     }
   }
 
@@ -373,7 +457,7 @@ export class LobbyController {
     if (!this.currentTable) return;
     const table = this.currentTable;
     this.dom.currentTableName.textContent = table.tableName;
-    this.dom.currentGameTag.textContent = `${table.gameMeta.icon} ${table.gameMeta.name} (桌号: ${table.tableId})`;
+    this.dom.currentGameTag.textContent = `${table.gameMeta.name} (桌号: ${table.tableId})`;
 
     const myUserId = this.getUserId();
     const isHost = table.hostUserId === myUserId;
@@ -495,7 +579,10 @@ export class LobbyController {
     const lastMove = state.moveHistory[state.moveHistory.length - 1];
     const isMobile = window.innerWidth <= 768;
 
-    let gridHtml = '<div class="gomoku-board-wrap"><div class="gomoku-grid">';
+    const equippedBoardId = themeManager?.getEquippedItem ? themeManager.getEquippedItem('game.gomoku.board') : 'board.classic';
+    const boardSkinClass = themeManager?.items?.[equippedBoardId]?.className || 'board-style-classic';
+
+    let gridHtml = `<div class="gomoku-board-wrap ${boardSkinClass}"><div class="gomoku-grid">`;
     for (let y = 0; y < 15; y++) {
       for (let x = 0; x < 15; x++) {
         const val = state.board[y][x];
@@ -594,8 +681,6 @@ export class LobbyController {
     this.dom.myRoleBadge.textContent = '骰子决战';
     this.dom.turnIndicator.textContent = '比拼点数总和，掷出点数';
 
-    const diceIcons = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-
     let html = `
       <div class="dice-arena-wrap">
         <div class="dice-players-row">
@@ -604,8 +689,8 @@ export class LobbyController {
     Object.values(state.playerStates).forEach(p => {
       const isMe = p.userId === myUserId;
       const dicesStr = p.hasRolled
-        ? p.dices.map(d => diceIcons[d] || d).join(' ')
-        : '- - -';
+        ? p.dices.map(d => `<span class="dice-pip-token" aria-label="${d}点">${d}</span>`).join('')
+        : '<span class="dice-pip-pending">- - -</span>';
       const scoreStr = p.hasRolled ? `${p.totalScore} 点` : '等待掷骰...';
 
       html += `

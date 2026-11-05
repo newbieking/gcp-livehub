@@ -15,11 +15,21 @@
           effective = window.matchMedia('(prefers-color-scheme: light)').matches ? 'nordic-clean' : 'cyber-slate';
         }
         document.documentElement.setAttribute('data-theme', effective);
+        const types = {
+          'cyber-slate': 'dark',
+          'nordic-clean': 'light',
+          'midnight-oled': 'dark',
+          'xmas-pine': 'dark',
+          'xmas-snow': 'light'
+        };
+        document.documentElement.setAttribute('data-theme-type', types[effective] || 'dark');
         const meta = document.querySelector('meta[name="theme-color"]');
         const colors = {
           'cyber-slate': '#0f172a',
-          'nordic-clean': '#f1f5f9',
-          'midnight-oled': '#000000'
+          'nordic-clean': '#f6f5f0',
+          'midnight-oled': '#000000',
+          'xmas-pine': '#0a1913',
+          'xmas-snow': '#f8fafc'
         };
         if (meta && colors[effective]) meta.setAttribute('content', colors[effective]);
       } catch(e) {}
@@ -46,7 +56,7 @@
             </svg>
           </div>
           <div class="brand-text">
-            <h2>GCP LiveHub</h2>
+            <h2>GCP LiveHub <span id="headerOrnamentWrap" class="header-ornament-wrap"></span></h2>
             <span class="badge-tech">ESM + Socket.IO</span>
           </div>
         </div>
@@ -180,6 +190,7 @@
             <div class="header-title-row">
               <span class="chat-mode-badge" id="chatModeBadge">公共频道</span>
               <h1 id="chatTitle">大厅讨论区</h1>
+              <span id="chatHeaderOrnamentWrap" class="header-ornament-wrap"></span>
             </div>
             <p id="chatSubtitle">已连接至云端实时长连接通道</p>
           </div>
@@ -411,27 +422,57 @@
 
         <!-- 创建桌台模态弹窗 -->
         <div class="modal-backdrop hidden" id="createTableModal">
-          <div class="modal-card">
+          <div class="modal-card create-table-modal-card">
             <div class="modal-header">
-              <h3>创建游戏桌台</h3>
-              <button class="modal-close-btn" id="closeCreateTableModalBtn">&times;</button>
+              <div class="modal-title-wrap">
+                <h3>创建游戏桌台</h3>
+                <p class="modal-subtitle">设定桌台名称并挑选一款对战小游戏即刻开局</p>
+              </div>
+              <button class="modal-close-btn" id="closeCreateTableModalBtn" aria-label="关闭">&times;</button>
             </div>
             <form id="createTableForm">
               <div class="form-group">
-                <label for="newTableNameInput">桌台名称</label>
-                <input type="text" id="newTableNameInput" maxlength="20" placeholder="为桌台起个响亮名字" required>
+                <label for="newTableNameInput" class="form-label-with-hint">
+                  <span>桌台名称</span>
+                  <span class="form-sub-hint">最多20字</span>
+                </label>
+                <div class="input-with-action">
+                  <input type="text" id="newTableNameInput" maxlength="20" placeholder="例如：巅峰对弈厅" required autocomplete="off">
+                  <button type="button" class="input-action-btn" id="randomizeTableNameBtn" title="随机生成个性名称">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    <span>随机</span>
+                  </button>
+                </div>
               </div>
               <div class="form-group">
-                <label for="selectGameType">选择对战小游戏</label>
-                <select id="selectGameType" class="form-select">
-                  <option value="gomoku">五子棋 (Gomoku) (2人对战)</option>
-                  <option value="dice_battle">骰子大决战 (Dice Battle) (2~4人)</option>
+                <label class="form-label-with-hint">
+                  <span>选择对战小游戏</span>
+                  <span class="form-sub-hint">点击卡片切换</span>
+                </label>
+                <!-- 视觉化小游戏卡片选择器 -->
+                <div class="create-game-cards-grid" id="createGameCardsGrid">
+                  <!-- 动态由 lobby.js 渲染游戏卡片 -->
+                </div>
+                <!-- 隐藏的原始 select，确保与底层 socket 协议及表单机制 100% 兼容 -->
+                <select id="selectGameType" class="form-select hidden" aria-hidden="true" tabindex="-1">
+                  <option value="gomoku">五子棋 (Gomoku)</option>
+                  <option value="dice_battle">骰子大决战 (Dice Battle)</option>
                 </select>
-                <p class="form-hint" id="gameMetaDesc">经典双人轮流落子，横竖斜率先连成五子者获胜 | 游戏人数：最低 2 人，最多 2 人</p>
+                <!-- 选中游戏规则与人数说明卡片 -->
+                <div class="selected-game-detail-card" id="selectedGameDetailCard">
+                  <div class="detail-card-header">
+                    <span class="detail-card-badge" id="selectedGamePlayerCount">2人对弈</span>
+                    <span class="detail-card-tag" id="selectedGameTypeTag">经典策略</span>
+                  </div>
+                  <p class="detail-card-desc" id="gameMetaDesc">经典双人轮流落子，横竖斜率先连成五子者获胜</p>
+                </div>
               </div>
-              <div class="modal-footer">
+              <div class="modal-footer modal-footer-balanced">
                 <button type="button" class="btn btn-outline" id="cancelCreateTableBtn">取消</button>
-                <button type="submit" class="btn btn-primary">立即创建</button>
+                <button type="submit" class="btn btn-primary" id="confirmCreateTableBtn">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  <span>立即创建</span>
+                </button>
               </div>
             </form>
           </div>
@@ -457,28 +498,52 @@
             </div>
           </div>
         </div>
+      </section>
 
-        <!-- 界面主题与装扮中心模态弹窗 (Cosmetics Hub) -->
-        <div class="modal-backdrop hidden" id="cosmeticsHubModal">
-          <div class="modal-card cosmetics-hub-card">
-            <div class="modal-header">
-              <div class="modal-title-wrap">
-                <h3 id="cosmeticsModalTitle">界面主题与装扮中心</h3>
-                <p class="modal-subtitle">自由切换设计风格，支持个性化扩展装扮</p>
-              </div>
-              <button class="modal-close-btn" id="closeCosmeticsHubBtn" aria-label="关闭">&times;</button>
+      <!-- 界面主题与装扮中心模态弹窗 (Cosmetics Hub: 全局顶层可用) -->
+      <div class="modal-backdrop hidden" id="cosmeticsHubModal">
+        <div class="modal-card cosmetics-hub-card">
+          <div class="modal-header">
+            <div class="modal-title-wrap">
+              <h3 id="cosmeticsModalTitle">界面主题与装扮中心</h3>
+              <p class="modal-subtitle">自由切换设计风格、节日活动与槽位个性装扮</p>
             </div>
-            <div class="cosmetics-hub-body">
+            <button class="modal-close-btn" id="closeCosmeticsHubBtn" aria-label="关闭">&times;</button>
+          </div>
+          <div class="cosmetics-hub-body">
+            <!-- 顶部选项卡导航 -->
+            <nav class="cosmetics-tab-nav" aria-label="装扮中心分栏">
+              <button class="cosmetics-tab-btn active" data-tab="tabThemes">配色主题</button>
+              <button class="cosmetics-tab-btn" data-tab="tabEvents">节日活动</button>
+              <button class="cosmetics-tab-btn" data-tab="tabSlots">槽位装扮</button>
+            </nav>
+
+            <!-- 选项卡 1: 配色主题 -->
+            <div class="cosmetics-tab-pane active" id="tabThemes">
               <div class="cosmetics-themes-grid" id="cosmeticsThemesGrid">
                 <!-- 动态由 ThemeManager 渲染注册的主题卡片 -->
               </div>
             </div>
-            <div class="modal-footer">
-              <button class="btn btn-primary" id="confirmCosmeticsBtn">确定</button>
+
+            <!-- 选项卡 2: 节日活动包 -->
+            <div class="cosmetics-tab-pane" id="tabEvents">
+              <div id="cosmeticsEventsContainer">
+                <!-- 动态由 ThemeManager 渲染活动卡片 -->
+              </div>
+            </div>
+
+            <!-- 选项卡 3: 槽位装扮 -->
+            <div class="cosmetics-tab-pane" id="tabSlots">
+              <div id="cosmeticsSlotsContainer">
+                <!-- 动态由 ThemeManager 渲染各个槽位的可选物件 -->
+              </div>
             </div>
           </div>
+          <div class="modal-footer">
+            <button class="btn btn-primary" id="confirmCosmeticsBtn">确定</button>
+          </div>
         </div>
-      </section>
+      </div>
     </main>
   </div>
 

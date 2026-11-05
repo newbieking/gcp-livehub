@@ -13,7 +13,8 @@ export class DiceBattleGame extends BaseGame {
       description: '动态 2~4 人对战！每人掷骰比拼点数总和与幸运组合',
       minPlayers: 2,
       maxPlayers: 4,
-      icon: '🎲'
+      iconKey: 'dice',
+      icon: ''
     });
   }
 

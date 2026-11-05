@@ -177,7 +177,7 @@ export function ensureRoomInList(roomName) {
 
     const titleSpan = document.createElement('span');
     titleSpan.className = 'nav-item-title';
-    titleSpan.textContent = `📌 ${roomName}`;
+    titleSpan.textContent = roomName;
 
     li.appendChild(titleSpan);
     dom.roomList.appendChild(li);
@@ -201,7 +201,7 @@ export function renderTypingIndicator() {
     const targetUserId = state.activeConversation.targetId;
     const isTyping = state.dmTypingStatus.get(targetUserId);
     if (isTyping) {
-      dom.typingText.textContent = `✍️ 对方正在输入中...`;
+      dom.typingText.textContent = '对方正在输入中...';
       return;
     }
   }
