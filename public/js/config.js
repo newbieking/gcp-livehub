@@ -4,6 +4,10 @@
 export const STORAGE_KEYS = {
   USER_ID: 'livehub_user_id',
   USERNAME: 'livehub_username',
+  DEVICE_ID: 'livehub_device_id',
+  AUTH_TOKEN: 'livehub_auth_token',
+  AUTH_TYPE: 'livehub_auth_type',
+  BOUND_ID: 'livehub_bound_id',
   UNREAD_PREFIX: 'livehub_unread_',
   CONTACTS_PREFIX: 'livehub_contacts_',
   LAST_READ_PREFIX: 'livehub_last_read_'

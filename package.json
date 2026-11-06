@@ -8,6 +8,7 @@
     "dev": "node --env-file=.env.development --watch src/index.js",
     "start:prod": "node --env-file=.env.production src/index.js",
     "test:contrast": "node scripts/check-contrast.js",
+    "test:auth": "node scripts/test-auth.js && node scripts/test-auth-api.js",
     "test": "node --env-file=.env.test src/index.js",
     "env:dev": "node scripts/switch-env.js dev",
     "env:prod": "node scripts/switch-env.js prod",

@@ -3,6 +3,7 @@ import { createSocketConnection } from './socket.js';
 import { WhiteboardController } from './whiteboard.js';
 import { LobbyController } from './lobby.js';
 import { themeManager, initThemeUI } from './theme.js';
+import { initAuthManager } from './auth.js';
 import {
   dom,
   initUIBindings,
@@ -41,6 +42,9 @@ const socket = createSocketConnection(
 // 初始化多人协作白板控制器与实时对战大厅控制器
 const whiteboard = new WhiteboardController(socket, state);
 const lobby = new LobbyController(socket, state);
+
+// 初始化渐进式认证与账号管理
+initAuthManager(socket);
 
 // ----------------------------------------
 // 1. 聊天室/私聊会话切换逻辑
@@ -317,8 +321,17 @@ socket.on('dm:new_message', (msg) => {
   }
 });
 
-// 服务端权威握手回执 (SSOT: 下发权威未读汇总与最近联系人)
-socket.on('auth:init_success', ({ unreadSummary, recentConversations }) => {
+// 服务端权威握手回执 (SSOT: 下发权威身份、Token、未读汇总与最近联系人)
+socket.on('auth:init_success', ({ userId, username, authType, boundIdentifier, token, unreadSummary, recentConversations }) => {
+  if (userId) {
+    state.updateAuthSession({
+      userId,
+      username,
+      authType,
+      boundIdentifier,
+      token
+    });
+  }
   if (unreadSummary) {
     state.setServerUnreadSummary(unreadSummary);
   }

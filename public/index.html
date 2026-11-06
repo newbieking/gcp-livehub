@@ -63,15 +63,26 @@
         <button class="mobile-close-sidebar-btn" id="closeSidebarBtn" title="收起菜单">&times;</button>
       </div>
 
-      <!-- 用户身份配置 -->
+      <!-- 用户身份配置与渐进式认证 -->
       <div class="profile-card">
         <div class="profile-meta">
-          <label for="usernameInput">当前昵称</label>
+          <div class="profile-title-group">
+            <label for="usernameInput">当前身份</label>
+            <span class="auth-badge guest" id="authBadge">临时游客</span>
+          </div>
           <span class="user-id-tag" id="userIdTag">ID: --</span>
         </div>
         <div class="input-inline">
           <input type="text" id="usernameInput" maxlength="20" placeholder="设置你的昵称">
           <button id="saveUsernameBtn" title="保存昵称">保存</button>
+        </div>
+        <div class="auth-action-strip" id="authActionStrip">
+          <button class="auth-action-btn" id="openAuthModalBtn" type="button" title="账号管理与防丢升级">
+            <svg class="auth-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span id="authActionBtnText">绑定账号以防丢失</span>
+          </button>
         </div>
       </div>
 
@@ -541,6 +552,83 @@
           </div>
           <div class="modal-footer">
             <button class="btn btn-primary" id="confirmCosmeticsBtn">确定</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 渐进式账号认证与升级模态弹窗 (Auth Modal) -->
+      <div class="modal-backdrop hidden" id="authModal">
+        <div class="modal-card auth-modal-card">
+          <div class="modal-header">
+            <div class="modal-title-wrap">
+              <h3 id="authModalTitle">账号管理与多端同步</h3>
+              <p class="modal-subtitle">从无感游客一键升级为正式账号，防止数据丢失并支持多端漫游</p>
+            </div>
+            <button class="modal-close-btn" id="closeAuthModalBtn" aria-label="关闭">&times;</button>
+          </div>
+          <div class="auth-modal-body">
+            <!-- 成功提示条 -->
+            <div class="auth-success-msg hidden" id="authSuccessMsg"></div>
+
+            <!-- 切换选项卡：升级当前游客 / 登录已有账号 -->
+            <nav class="auth-tab-nav" aria-label="认证选项卡">
+              <button class="auth-tab-btn active" id="tabBtnBind" type="button">升级当前账号</button>
+              <button class="auth-tab-btn" id="tabBtnLogin" type="button">切换已有账号</button>
+            </nav>
+
+            <!-- 选项卡 1：绑定转正 -->
+            <form class="auth-form" id="bindForm">
+              <div class="auth-tips-box">
+                <svg class="auth-tip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <span>升级后当前游客的对局战绩、白板记录与聊天历史将完整保留。</span>
+              </div>
+              <div class="form-group">
+                <label for="bindIdentifierInput">登录标识（邮箱或个性账号）</label>
+                <input type="text" id="bindIdentifierInput" class="form-input" placeholder="例如: yourname@example.com" required autocomplete="username">
+              </div>
+              <div class="form-group">
+                <label for="bindPasswordInput">设置密码（至少 6 位）</label>
+                <input type="password" id="bindPasswordInput" class="form-input" placeholder="输入安全密码" required minlength="6" autocomplete="new-password">
+              </div>
+              <div class="auth-error-msg hidden" id="bindErrorMsg"></div>
+              <div class="modal-footer no-padding">
+                <button type="submit" class="btn btn-primary btn-block" id="bindSubmitBtn">立即升级转正</button>
+              </div>
+            </form>
+
+            <!-- 选项卡 2：已有账号登录 -->
+            <form class="auth-form hidden" id="loginForm">
+              <div class="auth-tips-box warning">
+                <svg class="auth-tip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <span>切换已有账号将载入该账号在云端的数据，替换当前设备的临时游客。</span>
+              </div>
+              <div class="form-group">
+                <label for="loginIdentifierInput">账号 / 邮箱</label>
+                <input type="text" id="loginIdentifierInput" class="form-input" placeholder="输入已绑定的账号或邮箱" required autocomplete="username">
+              </div>
+              <div class="form-group">
+                <label for="loginPasswordInput">登录密码</label>
+                <input type="password" id="loginPasswordInput" class="form-input" placeholder="输入登录密码" required autocomplete="current-password">
+              </div>
+              <div class="auth-error-msg hidden" id="loginErrorMsg"></div>
+              <div class="modal-footer no-padding">
+                <button type="submit" class="btn btn-primary btn-block" id="loginSubmitBtn">登录并同步数据</button>
+              </div>
+            </form>
+
+            <!-- 已绑定状态卡片 (已是 registered 用户时显示) -->
+            <div class="auth-already-bound hidden" id="authAlreadyBound">
+              <div class="bound-card">
+                <div class="bound-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div class="bound-info">
+                  <h4>当前账号已绑定云端</h4>
+                  <p id="boundAccountText">绑定标识: --</p>
+                </div>
+              </div>
+              <p class="bound-desc">您的历史对局、好友消息已持久安全同步。您可在其他设备通过该账号密码直接登录。</p>
+            </div>
           </div>
         </div>
       </div>

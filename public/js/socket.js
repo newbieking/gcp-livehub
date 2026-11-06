@@ -5,15 +5,22 @@ import { state } from './state.js';
  * Socket.IO 连接与诊断生命周期模块
  */
 export function createSocketConnection(onStatusChange, onLatencyUpdate, onTransportChange) {
-  // io 来自 /socket.io/socket.io.js
-  const socket = window.io(SOCKET_CONFIG);
+  // io 来自 /socket.io/socket.io.js，握手阶段携带设备凭证与持久 Token
+  const socket = window.io({
+    ...SOCKET_CONFIG,
+    auth: {
+      token: state.user.token,
+      deviceId: state.user.deviceId,
+      username: state.user.username
+    }
+  });
 
   // 1. 连接就绪
   socket.on('connect', () => {
     onStatusChange('connected', '已连接');
     checkTransport(socket, onTransportChange);
 
-    // 握手并注册当前用户身份
+    // 握手并确认当前用户身份 (携带设备标识与本地可能修改的昵称)
     socket.emit('auth:init', {
       userId: state.user.userId,
       username: state.user.username

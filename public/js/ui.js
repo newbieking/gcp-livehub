@@ -2,6 +2,9 @@ import { state } from './state.js';
 
 export const dom = {
   userIdTag: document.getElementById('userIdTag'),
+  authBadge: document.getElementById('authBadge'),
+  authActionBtnText: document.getElementById('authActionBtnText'),
+  openAuthModalBtn: document.getElementById('openAuthModalBtn'),
   usernameInput: document.getElementById('usernameInput'),
   saveUsernameBtn: document.getElementById('saveUsernameBtn'),
   roomList: document.getElementById('roomList'),
@@ -15,6 +18,25 @@ export const dom = {
   transportTag: document.getElementById('transportTag'),
   reconnectTestBtn: document.getElementById('reconnectTestBtn'),
 
+  // 认证弹窗相关
+  authModal: document.getElementById('authModal'),
+  closeAuthModalBtn: document.getElementById('closeAuthModalBtn'),
+  authSuccessMsg: document.getElementById('authSuccessMsg'),
+  tabBtnBind: document.getElementById('tabBtnBind'),
+  tabBtnLogin: document.getElementById('tabBtnLogin'),
+  bindForm: document.getElementById('bindForm'),
+  loginForm: document.getElementById('loginForm'),
+  bindIdentifierInput: document.getElementById('bindIdentifierInput'),
+  bindPasswordInput: document.getElementById('bindPasswordInput'),
+  bindErrorMsg: document.getElementById('bindErrorMsg'),
+  bindSubmitBtn: document.getElementById('bindSubmitBtn'),
+  loginIdentifierInput: document.getElementById('loginIdentifierInput'),
+  loginPasswordInput: document.getElementById('loginPasswordInput'),
+  loginErrorMsg: document.getElementById('loginErrorMsg'),
+  loginSubmitBtn: document.getElementById('loginSubmitBtn'),
+  authAlreadyBound: document.getElementById('authAlreadyBound'),
+  boundAccountText: document.getElementById('boundAccountText'),
+
   chatModeBadge: document.getElementById('chatModeBadge'),
   chatTitle: document.getElementById('chatTitle'),
   chatSubtitle: document.getElementById('chatSubtitle'),
@@ -25,9 +47,40 @@ export const dom = {
   messageInput: document.getElementById('messageInput')
 };
 
+export function updateAuthUI(user) {
+  if (!dom.authBadge) return;
+  const isRegistered = user && user.authType === 'registered';
+
+  if (isRegistered) {
+    dom.authBadge.textContent = '已绑定云端';
+    dom.authBadge.className = 'auth-badge registered';
+    if (dom.authActionBtnText) {
+      dom.authActionBtnText.textContent = '账号设置 (已绑定)';
+    }
+    if (dom.openAuthModalBtn) {
+      dom.openAuthModalBtn.classList.add('bound');
+    }
+  } else {
+    dom.authBadge.textContent = '临时游客';
+    dom.authBadge.className = 'auth-badge guest';
+    if (dom.authActionBtnText) {
+      dom.authActionBtnText.textContent = '绑定账号以防丢失';
+    }
+    if (dom.openAuthModalBtn) {
+      dom.openAuthModalBtn.classList.remove('bound');
+    }
+  }
+}
+
 export function initUIBindings() {
   dom.userIdTag.textContent = `ID: ${state.user.userId.slice(0, 8)}`;
   dom.usernameInput.value = state.user.username;
+  updateAuthUI(state.user);
+  state.onAuthChange((user) => {
+    dom.userIdTag.textContent = `ID: ${user.userId.slice(0, 8)}`;
+    dom.usernameInput.value = user.username;
+    updateAuthUI(user);
+  });
 }
 
 export function updateHeader() {
@@ -107,6 +160,14 @@ export function renderOnlineUsers(onSelectUser) {
 
     content.appendChild(dot);
     content.appendChild(name);
+
+    if (user.authType === 'registered') {
+      const authBadge = document.createElement('span');
+      authBadge.className = 'user-item-auth-badge';
+      authBadge.title = '已绑定正式账号';
+      authBadge.textContent = '✓';
+      content.appendChild(authBadge);
+    }
 
     if (!user.isOnline) {
       const offlineTag = document.createElement('span');

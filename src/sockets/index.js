@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import { config } from '../config/index.js';
+import { userStore } from '../services/userStore.js';
 import { registerConnectionHandlers } from './connectionHandler.js';
 import { registerRoomHandlers } from './roomHandler.js';
 import { registerDirectMessageHandlers } from './directMessageHandler.js';
@@ -15,6 +16,33 @@ export function initSocketServer(httpServer) {
     pingTimeout: config.socket.pingTimeout,
     pingInterval: config.socket.pingInterval,
     transports: config.socket.transports
+  });
+
+  // 权威长连接握手鉴权中间件 (Progressive Auth Middleware)
+  io.use(async (socket, next) => {
+    try {
+      const auth = socket.handshake.auth || {};
+      const { token, deviceId, username } = auth;
+
+      // 1. 尝试以现有 Token 鉴权
+      if (token) {
+        const user = userStore.getUserByToken(token);
+        if (user) {
+          socket.data.user = userStore.toSafeUser(user);
+          socket.data.token = token;
+          return next();
+        }
+      }
+
+      // 2. Token 无效或不存在，以 deviceId 恢复或创建游客
+      const { user, token: guestToken } = await userStore.getOrCreateGuestUser(deviceId, username);
+      socket.data.user = user;
+      socket.data.token = guestToken;
+      next();
+    } catch (err) {
+      console.error(`[Socket 握手鉴权异常] ${err.message}`);
+      next(new Error('AUTHENTICATION_FAILED'));
+    }
   });
 
   io.on('connection', (socket) => {

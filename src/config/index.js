@@ -39,6 +39,12 @@ export const config = {
     level: (process.env.LOG_LEVEL || (envName === 'production' ? 'info' : 'debug')).toLowerCase()
   },
 
+  // 认证与安全配置
+  auth: {
+    secret: process.env.AUTH_SECRET || 'livehub-secure-auth-secret-change-in-prod',
+    tokenExpiresDays: parseInt(process.env.AUTH_TOKEN_EXPIRES_DAYS || '30', 10)
+  },
+
   // Socket.IO 长连接与心跳策略
   socket: {
     pingTimeout: parseInt(process.env.SOCKET_PING_TIMEOUT || '60000', 10),

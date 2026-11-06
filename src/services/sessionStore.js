@@ -12,12 +12,14 @@ class SessionStore {
     this.userSockets = new Map();
   }
 
-  saveSession(socketId, { userId, username, currentRoom = null }) {
+  saveSession(socketId, { userId, username, currentRoom = null, authType = 'guest', boundIdentifier = null }) {
     const existing = this.sessions.get(socketId) || {};
     const sessionData = {
       socketId,
       userId: userId || existing.userId || socketId,
       username: username || existing.username || '匿名用户',
+      authType: authType || existing.authType || 'guest',
+      boundIdentifier: boundIdentifier || existing.boundIdentifier || null,
       currentRoom: currentRoom !== undefined ? currentRoom : existing.currentRoom,
       connectedAt: existing.connectedAt || Date.now()
     };
@@ -70,6 +72,7 @@ class SessionStore {
         uniqueUsers.set(session.userId, {
           userId: session.userId,
           username: session.username,
+          authType: session.authType,
           currentRoom: session.currentRoom
         });
       }
