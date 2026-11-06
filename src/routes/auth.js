@@ -84,6 +84,19 @@ export function createAuthRouter() {
       const { identifier, password } = req.body || {};
       const result = await userStore.loginWithCredentials(identifier, password);
 
+      // 若需要两步验证，返回挑战态阻断直登
+      if (result.requires2FA) {
+        return res.json({
+          code: 'REQUIRES_2FA',
+          message: '该账号已开启两步验证，请输入动态口令',
+          data: {
+            requires2FA: true,
+            tempToken: result.tempToken,
+            user: result.user
+          }
+        });
+      }
+
       return res.json({
         code: 'SUCCESS',
         message: '登录成功',
@@ -93,6 +106,94 @@ export function createAuthRouter() {
       return res.status(401).json({
         code: 'INVALID_CREDENTIALS',
         message: '账号或密码错误'
+      });
+    }
+  });
+
+  /**
+   * POST /api/auth/2fa/verify-login
+   * 登录阶段提交 6 位两步验证动态码换发正式 Token
+   * Body: { tempToken: string, code: string }
+   */
+  router.post('/2fa/verify-login', async (req, res) => {
+    try {
+      const { tempToken, code } = req.body || {};
+      const result = await userStore.verifyLoginTwoFactor(tempToken, code);
+
+      return res.json({
+        code: 'SUCCESS',
+        message: '两步验证通过，登录成功',
+        data: result
+      });
+    } catch (err) {
+      const status = (err.message === 'INVALID_2FA_CODE' || err.message === 'INVALID_CHALLENGE_TOKEN') ? 401 : 400;
+      return res.status(status).json({
+        code: err.message,
+        message: err.message === 'INVALID_2FA_CODE' ? '动态验证码错误或已过期，请核对手机时间' : '两步验证挑战已过期，请重新登录'
+      });
+    }
+  });
+
+  /**
+   * POST /api/auth/2fa/setup
+   * 请求生成两步验证临时密钥与绑定二维码
+   */
+  router.post('/2fa/setup', requireAuth, async (req, res) => {
+    try {
+      const setupData = await userStore.prepareTwoFactor(req.user.userId);
+      return res.json({
+        code: 'SUCCESS',
+        message: '已生成两步验证密钥',
+        data: setupData
+      });
+    } catch (err) {
+      return res.status(400).json({
+        code: err.message,
+        message: err.message === 'MUST_BE_REGISTERED' ? '游客账号无法绑定两步验证，请先升级为正式账号' : '生成两步验证密钥失败'
+      });
+    }
+  });
+
+  /**
+   * POST /api/auth/2fa/enable
+   * 提交 6 位验证码确认激活两步验证
+   * Body: { code: string }
+   */
+  router.post('/2fa/enable', requireAuth, async (req, res) => {
+    try {
+      const { code } = req.body || {};
+      const safeUser = await userStore.enableTwoFactor(req.user.userId, code);
+      return res.json({
+        code: 'SUCCESS',
+        message: '两步验证已成功激活启用',
+        data: { user: safeUser }
+      });
+    } catch (err) {
+      return res.status(400).json({
+        code: err.message,
+        message: err.message === 'INVALID_2FA_CODE' ? '动态验证码不正确，请确保手机时间已同步' : '激活两步验证失败'
+      });
+    }
+  });
+
+  /**
+   * POST /api/auth/2fa/disable
+   * 关闭两步验证
+   * Body: { codeOrPassword: string }
+   */
+  router.post('/2fa/disable', requireAuth, async (req, res) => {
+    try {
+      const { codeOrPassword } = req.body || {};
+      const safeUser = await userStore.disableTwoFactor(req.user.userId, codeOrPassword);
+      return res.json({
+        code: 'SUCCESS',
+        message: '两步验证已成功关闭',
+        data: { user: safeUser }
+      });
+    } catch (err) {
+      return res.status(400).json({
+        code: err.message,
+        message: '验证失败，请输入正确的 6 位动态验证码或登录密码'
       });
     }
   });

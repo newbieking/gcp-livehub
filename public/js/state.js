@@ -34,6 +34,7 @@ class AppState {
       username: savedUsername,
       authType: authType,
       boundIdentifier: boundIdentifier,
+      twoFactorEnabled: false,
       deviceId: deviceId,
       token: authToken
     };
@@ -86,11 +87,12 @@ class AppState {
   /**
    * 服务端权威下发或绑定升级后，同步更新本地会话
    */
-  updateAuthSession({ userId, username, authType, boundIdentifier, token }) {
+  updateAuthSession({ userId, username, authType, boundIdentifier, twoFactorEnabled, token }) {
     if (userId) this.user.userId = userId;
     if (username) this.user.username = username;
     if (authType) this.user.authType = authType;
     if (boundIdentifier !== undefined) this.user.boundIdentifier = boundIdentifier;
+    if (twoFactorEnabled !== undefined) this.user.twoFactorEnabled = !!twoFactorEnabled;
     if (token) this.user.token = token;
 
     // 持久化存储

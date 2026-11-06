@@ -67,6 +67,7 @@ export function registerConnectionHandlers(io, socket) {
       username: session.username,
       authType: session.authType,
       boundIdentifier: session.boundIdentifier,
+      twoFactorEnabled: !!authUser?.twoFactorEnabled,
       token,
       unreadSummary,
       recentConversations
@@ -112,6 +113,7 @@ export function registerConnectionHandlers(io, socket) {
         username: session.username,
         authType: session.authType,
         boundIdentifier: session.boundIdentifier,
+        twoFactorEnabled: !!safeUser?.twoFactorEnabled,
         token: socket.data.token,
         unreadSummary,
         recentConversations

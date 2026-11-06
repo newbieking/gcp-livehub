@@ -37,6 +37,27 @@ export const dom = {
   authAlreadyBound: document.getElementById('authAlreadyBound'),
   boundAccountText: document.getElementById('boundAccountText'),
 
+  // 2FA 两步验证相关
+  twoFactorStatusBadge: document.getElementById('twoFactorStatusBadge'),
+  open2FASetupBtn: document.getElementById('open2FASetupBtn'),
+  disable2FABtn: document.getElementById('disable2FABtn'),
+  twoFactorSetupView: document.getElementById('twoFactorSetupView'),
+  backFrom2FASetupBtn: document.getElementById('backFrom2FASetupBtn'),
+  twoFactorQrCodeImg: document.getElementById('twoFactorQrCodeImg'),
+  twoFactorSecretCode: document.getElementById('twoFactorSecretCode'),
+  copy2FASecretBtn: document.getElementById('copy2FASecretBtn'),
+  twoFactorSetupCodeInput: document.getElementById('twoFactorSetupCodeInput'),
+  twoFactorSetupErrorMsg: document.getElementById('twoFactorSetupErrorMsg'),
+  confirmEnable2FABtn: document.getElementById('confirmEnable2FABtn'),
+
+  // 登录阶段 2FA 挑战
+  loginCredentialsFields: document.getElementById('loginCredentialsFields'),
+  login2FAChallenge: document.getElementById('login2FAChallenge'),
+  login2FACodeInput: document.getElementById('login2FACodeInput'),
+  login2FAErrorMsg: document.getElementById('login2FAErrorMsg'),
+  login2FASubmitBtn: document.getElementById('login2FASubmitBtn'),
+  cancel2FALoginBtn: document.getElementById('cancel2FALoginBtn'),
+
   chatModeBadge: document.getElementById('chatModeBadge'),
   chatTitle: document.getElementById('chatTitle'),
   chatSubtitle: document.getElementById('chatSubtitle'),

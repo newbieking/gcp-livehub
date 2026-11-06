@@ -598,21 +598,40 @@
 
             <!-- 选项卡 2：已有账号登录 -->
             <form class="auth-form hidden" id="loginForm">
-              <div class="auth-tips-box warning">
+              <div class="auth-tips-box warning" id="loginTipsBox">
                 <svg class="auth-tip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                 <span>切换已有账号将载入该账号在云端的数据，替换当前设备的临时游客。</span>
               </div>
-              <div class="form-group">
-                <label for="loginIdentifierInput">账号 / 邮箱</label>
-                <input type="text" id="loginIdentifierInput" class="form-input" placeholder="输入已绑定的账号或邮箱" required autocomplete="username">
+              <div id="loginCredentialsFields">
+                <div class="form-group">
+                  <label for="loginIdentifierInput">账号 / 邮箱</label>
+                  <input type="text" id="loginIdentifierInput" class="form-input" placeholder="输入已绑定的账号或邮箱" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                  <label for="loginPasswordInput">登录密码</label>
+                  <input type="password" id="loginPasswordInput" class="form-input" placeholder="输入登录密码" required autocomplete="current-password">
+                </div>
+                <div class="auth-error-msg hidden" id="loginErrorMsg"></div>
+                <div class="modal-footer no-padding">
+                  <button type="submit" class="btn btn-primary btn-block" id="loginSubmitBtn">登录并同步数据</button>
+                </div>
               </div>
-              <div class="form-group">
-                <label for="loginPasswordInput">登录密码</label>
-                <input type="password" id="loginPasswordInput" class="form-input" placeholder="输入登录密码" required autocomplete="current-password">
-              </div>
-              <div class="auth-error-msg hidden" id="loginErrorMsg"></div>
-              <div class="modal-footer no-padding">
-                <button type="submit" class="btn btn-primary btn-block" id="loginSubmitBtn">登录并同步数据</button>
+
+              <!-- 2FA 两步验证挑战面板 (若账号开启 2FA 时触发) -->
+              <div class="login-2fa-challenge hidden" id="login2FAChallenge">
+                <div class="auth-tips-box">
+                  <svg class="auth-tip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  <span>该账号已受两步验证保护，请输入身份验证器 (Authenticator) 上的 6 位动态口令。</span>
+                </div>
+                <div class="form-group">
+                  <label for="login2FACodeInput">6 位动态验证码</label>
+                  <input type="text" id="login2FACodeInput" class="form-input otp-input" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+                </div>
+                <div class="auth-error-msg hidden" id="login2FAErrorMsg"></div>
+                <div class="modal-footer no-padding challenge-actions">
+                  <button type="button" class="btn btn-primary btn-block" id="login2FASubmitBtn">验证并完成登录</button>
+                  <button type="button" class="btn btn-secondary btn-block" id="cancel2FALoginBtn">返回重新输入密码</button>
+                </div>
               </div>
             </form>
 
@@ -628,6 +647,65 @@
                 </div>
               </div>
               <p class="bound-desc">您的历史对局、好友消息已持久安全同步。您可在其他设备通过该账号密码直接登录。</p>
+
+              <!-- 2FA 安全设置区块 -->
+              <div class="security-card">
+                <div class="security-card-header">
+                  <div class="security-card-title">
+                    <svg class="security-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <span>两步验证 (TOTP / 身份验证器)</span>
+                  </div>
+                  <span class="security-status-badge off" id="twoFactorStatusBadge">未开启</span>
+                </div>
+                <p class="security-card-desc">登录时需提供身份验证器 App 生成的 6 位动态码，防止密码泄露导致账号被盗。</p>
+                <div class="security-card-actions">
+                  <button type="button" class="btn btn-secondary btn-sm" id="open2FASetupBtn">开启两步验证</button>
+                  <button type="button" class="btn btn-danger-outline btn-sm hidden" id="disable2FABtn">关闭两步验证</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2FA 扫码激活向导面板 (默认隐藏) -->
+            <div class="two-factor-setup-view hidden" id="twoFactorSetupView">
+              <div class="setup-header">
+                <button type="button" class="back-link-btn" id="backFrom2FASetupBtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                  <span>返回账号设置</span>
+                </button>
+                <h4 class="setup-title">绑定身份验证器 (TOTP)</h4>
+              </div>
+
+              <div class="setup-steps">
+                <div class="step-item">
+                  <span class="step-num">1</span>
+                  <div class="step-content">
+                    <p class="step-label">使用任意身份验证器（如 Google / 微软 Authenticator、1Password、苹果钥匙串等）扫码：</p>
+                    <div class="qr-code-container">
+                      <img id="twoFactorQrCodeImg" class="qr-code-img" src="" alt="两步验证二维码">
+                    </div>
+                    <div class="manual-key-box">
+                      <span class="manual-key-label">或手动输入密钥：</span>
+                      <div class="key-copy-row">
+                        <code id="twoFactorSecretCode">--</code>
+                        <button type="button" class="btn-copy" id="copy2FASecretBtn" title="复制密钥">复制</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="step-item">
+                  <span class="step-num">2</span>
+                  <div class="step-content">
+                    <p class="step-label">输入应用中显示的 6 位动态验证码确认：</p>
+                    <input type="text" id="twoFactorSetupCodeInput" class="form-input otp-input" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+                  </div>
+                </div>
+              </div>
+
+              <div class="auth-error-msg hidden" id="twoFactorSetupErrorMsg"></div>
+              <div class="modal-footer no-padding">
+                <button type="button" class="btn btn-primary btn-block" id="confirmEnable2FABtn">确认并激活两步验证</button>
+              </div>
             </div>
           </div>
         </div>

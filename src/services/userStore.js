@@ -3,6 +3,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from '../config/index.js';
+import {
+  generateSecret,
+  generateTOTP,
+  verifyTOTP,
+  generateOtpAuthUri,
+  generateQRCodeDataUrl
+} from './totpService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -323,6 +330,7 @@ class UserStore {
 
   /**
    * 已有正式账号凭据登录 (多端漫游或切换账号)
+   * 若启用了 2FA，签发短期 2FA_CHALLENGE Token 阻断直接登录
    */
   async loginWithCredentials(identifier, password) {
     const cleanIdentifier = (identifier || '').trim().toLowerCase();
@@ -340,6 +348,56 @@ class UserStore {
     user.updatedAt = Date.now();
     await this.flushToDisk();
 
+    // 若启用了 2FA，返回两步验证挑战与短期凭据 (5分钟有效)
+    if (user.twoFactorEnabled && user.twoFactorSecret) {
+      const tempToken = this.signToken({
+        userId: user.userId,
+        stage: '2FA_CHALLENGE',
+        exp: Date.now() + 5 * 60 * 1000
+      });
+
+      return {
+        requires2FA: true,
+        tempToken,
+        user: this.toSafeUser(user)
+      };
+    }
+
+    const token = this.signToken({
+      userId: user.userId,
+      deviceId: user.deviceId,
+      exp: Date.now() + this.tokenExpiresMs
+    });
+
+    return {
+      requires2FA: false,
+      user: this.toSafeUser(user),
+      token
+    };
+  }
+
+  /**
+   * 登录阶段提交 6 位 TOTP 动态码完成最终验证
+   */
+  async verifyLoginTwoFactor(tempToken, code) {
+    const payload = this.verifyToken(tempToken);
+    if (!payload || !payload.userId || payload.stage !== '2FA_CHALLENGE') {
+      throw new Error('INVALID_CHALLENGE_TOKEN');
+    }
+
+    const user = this.users.get(payload.userId);
+    if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
+      throw new Error('2FA_NOT_ENABLED');
+    }
+
+    const isValid = verifyTOTP(user.twoFactorSecret, code);
+    if (!isValid) {
+      throw new Error('INVALID_2FA_CODE');
+    }
+
+    user.updatedAt = Date.now();
+    await this.flushToDisk();
+
     const token = this.signToken({
       userId: user.userId,
       deviceId: user.deviceId,
@@ -350,6 +408,85 @@ class UserStore {
       user: this.toSafeUser(user),
       token
     };
+  }
+
+  /**
+   * 准备开启 2FA：生成临时 Secret、OTPAuth URI 与二维码
+   */
+  async prepareTwoFactor(userId) {
+    const user = this.users.get(userId);
+    if (!user) throw new Error('USER_NOT_FOUND');
+    if (user.authType !== 'registered') throw new Error('MUST_BE_REGISTERED');
+
+    const secret = generateSecret();
+    user.tempTwoFactorSecret = secret;
+    user.updatedAt = Date.now();
+    await this.flushToDisk();
+
+    const accountName = user.boundIdentifier || user.username || user.userId;
+    const otpauthUri = generateOtpAuthUri({
+      secret,
+      accountName,
+      issuer: 'GCP LiveHub'
+    });
+
+    const qrCode = await generateQRCodeDataUrl(otpauthUri);
+
+    return {
+      secret,
+      otpauthUri,
+      qrCode
+    };
+  }
+
+  /**
+   * 提交 6 位动态验证码激活 2FA
+   */
+  async enableTwoFactor(userId, code) {
+    const user = this.users.get(userId);
+    if (!user) throw new Error('USER_NOT_FOUND');
+    if (!user.tempTwoFactorSecret) throw new Error('NO_PENDING_2FA');
+
+    const isValid = verifyTOTP(user.tempTwoFactorSecret, code);
+    if (!isValid) {
+      throw new Error('INVALID_2FA_CODE');
+    }
+
+    user.twoFactorSecret = user.tempTwoFactorSecret;
+    user.tempTwoFactorSecret = null;
+    user.twoFactorEnabled = true;
+    user.updatedAt = Date.now();
+    await this.flushToDisk();
+
+    return this.toSafeUser(user);
+  }
+
+  /**
+   * 关闭 2FA (需校验动态验证码或主密码)
+   */
+  async disableTwoFactor(userId, codeOrPassword) {
+    const user = this.users.get(userId);
+    if (!user) throw new Error('USER_NOT_FOUND');
+    if (!user.twoFactorEnabled || !user.twoFactorSecret) {
+      throw new Error('2FA_NOT_ENABLED');
+    }
+
+    const isCodeValid = verifyTOTP(user.twoFactorSecret, codeOrPassword);
+    const isPasswordValid = user.passwordHash
+      ? this.verifyPassword(codeOrPassword, user.passwordHash, user.salt)
+      : false;
+
+    if (!isCodeValid && !isPasswordValid) {
+      throw new Error('INVALID_CREDENTIALS');
+    }
+
+    user.twoFactorEnabled = false;
+    user.twoFactorSecret = null;
+    user.tempTwoFactorSecret = null;
+    user.updatedAt = Date.now();
+    await this.flushToDisk();
+
+    return this.toSafeUser(user);
   }
 
   /**

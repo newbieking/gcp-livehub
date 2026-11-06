@@ -322,13 +322,14 @@ socket.on('dm:new_message', (msg) => {
 });
 
 // 服务端权威握手回执 (SSOT: 下发权威身份、Token、未读汇总与最近联系人)
-socket.on('auth:init_success', ({ userId, username, authType, boundIdentifier, token, unreadSummary, recentConversations }) => {
+socket.on('auth:init_success', ({ userId, username, authType, boundIdentifier, twoFactorEnabled, token, unreadSummary, recentConversations }) => {
   if (userId) {
     state.updateAuthSession({
       userId,
       username,
       authType,
       boundIdentifier,
+      twoFactorEnabled,
       token
     });
   }
